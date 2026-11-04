@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Scaffold</title>
-<meta name="description" content="Os pré-requisitos das aulas de Neural Networks: Zero to Hero, em lições curtas com código.">
+<meta name="description" content="A matemática e a programação para acompanhar o Neural Networks: Zero to Hero, começando do início.">
 <meta name="theme-color" content="#0c1d4a">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230c1d4a'/%3E%3Cpath d='M18 50V14M46 50V14M18 24h28M18 40h28' stroke='%23eef2ff' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,11 +17,13 @@
   --ok: #17694a; --ok-bg: #e7f5ee; --err: #9a3412; --err-bg: #fdf0e8;
   --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  /* O texto cresce com a tela: a coluna fica cheia, sem faixas vazias. */
+  --texto: clamp(17px, 0.55vw + 9px, 21px);
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; }
-body { background: var(--bg); color: var(--fg); font: 400 17px/1.6 var(--sans); }
+body { background: var(--bg); color: var(--fg); font: 400 var(--texto)/1.6 var(--sans); }
 a { color: var(--sky); }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
 :focus-visible { outline: 2px solid var(--sky); outline-offset: 2px; }
@@ -29,42 +31,52 @@ code { font-family: var(--mono); font-size: .88em; background: var(--bg-2); padd
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 
 .app { height: 100dvh; display: grid; grid-template-rows: 56px minmax(0, 1fr); }
-.topo { display: flex; align-items: center; gap: 16px; padding: 0 20px; border-bottom: 1px solid var(--rule); }
+.topo { display: flex; align-items: center; gap: 20px; padding: 0 20px; border-bottom: 1px solid var(--rule); }
 .topo__marca { font-weight: 600; font-size: 18px; letter-spacing: -.02em; }
-.topo__cap { color: var(--mute); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topo__cap { color: var(--mute); font-size: 15px; white-space: nowrap; }
+.abas { display: flex; gap: 4px; margin-left: 8px; }
+.aba { padding: 6px 14px; border-radius: 999px; color: var(--mute); font-size: 15px; font-weight: 500; text-decoration: none; white-space: nowrap; }
+.aba:hover { color: var(--fg); background: var(--bg-2); }
+.aba--atual { color: var(--sky); background: #e6ebf8; }
 .topo__lista { margin-left: auto; font-size: 15px; font-weight: 500; padding: 7px 14px; border: 1px solid var(--rule); border-radius: 999px; white-space: nowrap; }
 .topo__lista:hover { background: var(--bg-2); }
 
-.corpo { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); min-height: 0; }
-.instrucao { overflow-y: auto; padding: 36px clamp(24px, 3.4vw, 56px) 48px; }
-.instrucao__in { max-width: 620px; margin-left: auto; }
-.licao-n { margin: 0; font-size: 14px; color: var(--mute); }
-h1 { margin: 6px 0 14px; font-size: clamp(30px, 3vw, 40px); font-weight: 500; line-height: 1.1; letter-spacing: -.03em; }
-.passos { display: flex; gap: 6px; margin-bottom: 26px; }
-.ponto { width: 30px; height: 5px; border-radius: 3px; background: var(--rule); }
+.corpo { display: grid; grid-template-columns: minmax(400px, 42fr) minmax(0, 58fr); min-height: 0; }
+.instrucao { overflow-y: auto; padding: clamp(28px, 3vw, 48px) clamp(24px, 3vw, 56px) 48px; }
+.licao-n { margin: 0; font-size: .82em; color: var(--mute); }
+h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; line-height: 1.1; letter-spacing: -.03em; }
+.passos { display: flex; gap: 6px; margin-bottom: 24px; }
+.ponto { flex: 1 1 0; max-width: 90px; height: 5px; border-radius: 3px; background: var(--rule); }
 .ponto--feito { background: #8fa3d6; }
 .ponto--atual { background: var(--sky); }
+.porque { margin: 0 0 22px; padding: 14px 18px; background: var(--night-2); color: var(--night-fg); border-radius: 12px; font-size: .94em; line-height: 1.55; }
+.porque h2 { margin: 0 0 3px; font-size: .86em; font-weight: 600; color: #f5d78e; }
+.porque p { margin: 0; }
 .texto p { margin: 0 0 14px; }
 .texto ul { margin: 0 0 14px; padding-left: 22px; }
 .texto li { margin-bottom: 6px; }
 .tarefa { margin-top: 24px; padding: 18px 20px; background: var(--bg-2); border-radius: 12px; }
-.tarefa h2 { margin: 0 0 6px; font-size: 15px; font-weight: 600; color: var(--sky); }
+.tarefa h2 { margin: 0 0 6px; font-size: .86em; font-weight: 600; color: var(--sky); }
 .tarefa p { margin: 0; color: var(--fg); }
 .tarefa code { background: #fff; }
 .ajudas { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 16px; }
-.link { font-size: 15px; color: var(--sky); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
-.dica { margin-top: 14px; font-size: 16px; color: var(--fg-2); border-left: 2px solid var(--sky); padding-left: 14px; }
-.solucao { margin: 14px 0 0; padding: 14px 16px; background: var(--night); color: var(--night-fg); font: 400 14px/1.6 var(--mono); border-radius: 10px; overflow-x: auto; }
-.voltar { display: inline-block; margin-top: 30px; font-size: 15px; color: var(--mute); }
+.link { font-size: .88em; color: var(--sky); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.dica { margin-top: 14px; font-size: .94em; color: var(--fg-2); border-left: 2px solid var(--sky); padding-left: 14px; }
+.solucao { margin: 14px 0 0; padding: 14px 16px; background: var(--night); color: var(--night-fg); font: 400 .84em/1.6 var(--mono); border-radius: 10px; overflow-x: auto; white-space: pre-wrap; }
+.navega { display: flex; justify-content: space-between; gap: 16px; margin-top: 30px; }
+.navega a { font-size: .88em; color: var(--mute); }
 
-.pratica { display: flex; flex-direction: column; min-height: 0; background: var(--night); color: var(--night-fg); }
-.editor { flex: 1 1 56%; min-height: 0; overflow: auto; }
-.CodeMirror { height: auto; min-height: 100%; font: 400 15px/1.65 var(--mono); }
+/* programação */
+.pratica { min-height: 0; background: var(--night); color: var(--night-fg); }
+.pratica--codigo { display: grid; grid-template-rows: minmax(0, 1.25fr) auto minmax(130px, 1fr); }
+.editor { min-height: 0; overflow: hidden; }
+.CodeMirror { height: 100%; font: 400 clamp(15px, .4vw + 9px, 18px)/1.65 var(--mono); }
 .cm-s-noite.CodeMirror { background: var(--night); color: var(--night-fg); }
 .cm-s-noite .CodeMirror-gutters { background: var(--night); border: 0; }
 .cm-s-noite .CodeMirror-linenumber { color: #4f618f; padding-right: 12px; }
 .cm-s-noite .CodeMirror-cursor { border-left: 2px solid #fff; }
 .cm-s-noite div.CodeMirror-selected, .cm-s-noite .CodeMirror-focused div.CodeMirror-selected { background: #2a4590; }
+.cm-s-noite .CodeMirror-scrollbar-filler, .cm-s-noite .CodeMirror-gutter-filler { background: var(--night); }
 .cm-s-noite .cm-keyword { color: #a9bdf5; }
 .cm-s-noite .cm-def { color: #fff; font-weight: 500; }
 .cm-s-noite .cm-number { color: #f5d78e; }
@@ -80,55 +92,98 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 3vw, 40px); font-weight: 500; li
 .barra .botao:hover { background: #fff; }
 .barra__rec { font-size: 14px; color: var(--night-mute); }
 .barra__rec:hover { color: #fff; }
-.barra__atalho { margin-left: auto; font-size: 13px; color: var(--night-mute); }
+.barra__atalho { margin-left: auto; font-size: 13px; color: var(--night-mute); white-space: nowrap; }
 .estado { font-size: 14px; color: var(--night-mute); }
-.console { flex: 1 1 44%; min-height: 0; overflow-y: auto; padding: 14px 18px 24px; border-top: 1px solid var(--night-rule); background: var(--night-2); }
+.console { min-height: 0; overflow-y: auto; padding: 14px 18px 24px; border-top: 1px solid var(--night-rule); background: var(--night-2); }
 .console__t { margin: 0 0 6px; font-size: 13px; color: var(--night-mute); }
-.saida { margin: 0; font: 400 14px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.saida { margin: 0; font: 400 15px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; }
 .figura { display: block; max-width: min(100%, 560px); margin-top: 10px; border-radius: 8px; background: #fff; }
-.resultado { margin-top: 14px; margin-bottom: 4px; padding: 14px 16px; border-radius: 12px; background: #fff; color: var(--fg); }
+.resultado { margin-top: 14px; padding: 14px 16px; border-radius: 12px; background: #fff; color: var(--fg); font-size: 16px; }
 .resultado p { margin: 0; }
-.resultado__t { font-weight: 500; font-size: 16px; }
+.resultado__t { font-weight: 500; }
 .resultado--ok .resultado__t { color: var(--ok); }
 .resultado--erro .resultado__t { color: var(--err); }
+.resultado__nota { margin-top: 4px !important; font-size: 15px; color: var(--fg-2); }
 .resultado__tec { margin-top: 6px !important; font: 400 13px/1.5 var(--mono); color: var(--mute); overflow-wrap: anywhere; }
 .resultado .botao { margin-top: 14px; }
-.aula { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--rule); font-size: 15px; color: var(--fg-2); }
-.aula__t { font-weight: 600; color: var(--sky); margin-bottom: 2px !important; }
-.aula--assistir .aula__t { font-size: 17px; font-weight: 500; line-height: 1.35; color: var(--fg); margin-bottom: 6px !important; }
-.botao--claro { margin-top: 12px; }
 
+/* matemática: o painel inteiro é usado */
+.pratica--mat { overflow-y: auto; padding: clamp(20px, 2.4vw, 44px); }
+.mat__in { min-height: 100%; display: grid; gap: clamp(18px, 2vw, 32px); align-content: center; }
+.cartao { padding: clamp(20px, 2vw, 36px); background: #fff; color: var(--fg); border-radius: 16px; }
+.cartao h2 { margin: 0 0 6px; font-size: .86em; font-weight: 600; color: var(--sky); }
+.cartao > p { margin: 0 0 16px; font-size: 1.08em; }
+.campos { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; }
+.campo { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-weight: 500; }
+.campo input { width: 130px; padding: 9px 14px; font: 500 1.05em var(--mono); color: var(--fg); background: var(--bg-2); border: 1.5px solid var(--rule); border-radius: 10px; }
+.campo input:focus { outline: 2px solid var(--sky); outline-offset: 1px; }
+.campo input.campo--errado { border-color: var(--err); background: var(--err-bg); }
+.campo input.campo--certo { border-color: var(--ok); background: var(--ok-bg); }
+.botao--verificar { flex: none; }
+.opcao { display: block; width: 100%; margin-bottom: 10px; padding: 14px 18px; text-align: left; line-height: 1.4; background: var(--bg-2); border: 1.5px solid var(--rule); border-radius: 12px; }
+.opcao:hover:not(:disabled) { border-color: var(--sky); }
+.opcao--certa { border-color: var(--ok); background: var(--ok-bg); }
+.opcao--errada { border-color: var(--err); background: var(--err-bg); }
+.opcao:disabled { cursor: default; color: var(--fg); }
+.cartao .resultado { margin-top: 16px; padding: 14px 0 0; border-top: 1px solid var(--rule); border-radius: 0; }
+.fig { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.fig__svg { display: block; width: 100%; height: auto; background: var(--night-2); border-radius: 14px; }
+.fig__n { font: 400 12px var(--mono); fill: var(--night-mute); }
+.fig__controles { display: flex; flex-wrap: wrap; gap: 10px 24px; }
+.fig__controle { flex: 1 1 200px; display: grid; gap: 2px; font-size: 14px; color: var(--night-mute); }
+.fig__controle input { width: 100%; accent-color: #f5d78e; height: 26px; }
+.fig__leitura { margin: 0; font: 500 clamp(15px, 1vw, 18px)/1.5 var(--mono); color: #f5d78e; min-height: 23px; }
+.fig__maquina { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: clamp(12px, 2vw, 32px); padding: clamp(24px, 4vw, 64px) 16px; background: var(--night-2); border-radius: 14px; }
+.fig__mq { display: grid; justify-items: center; min-width: 76px; font-size: 14px; color: var(--night-mute); }
+.fig__mq strong { font: 500 clamp(36px, 3.4vw, 60px)/1.15 var(--mono); color: #fff; }
+.fig__mq--sai strong { color: #f5d78e; }
+.fig__mq--regra { padding: 14px 20px; border: 1.5px solid var(--night-rule); border-radius: 12px; font: 500 clamp(16px, 1.3vw, 22px) var(--mono); color: var(--night-fg); white-space: nowrap; }
+/* Tela baixa: gráfico e exercício lado a lado, para o exercício não cair fora da tela. */
+@media (min-width: 901px) and (max-height: 800px) {
+  .mat__in--fig { grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr); align-items: start; align-content: start; }
+}
+
+/* lista */
 .fundo { position: fixed; inset: 0; background: rgba(7, 17, 49, .4); z-index: 20; }
-.lista { position: fixed; top: 0; right: 0; bottom: 0; width: min(440px, 100vw); background: #fff; z-index: 21; overflow-y: auto; padding: 22px 26px 40px; }
+.lista { position: fixed; top: 0; right: 0; bottom: 0; width: min(480px, 100vw); background: #fff; z-index: 21; overflow-y: auto; padding: 22px 26px 40px; font-size: 16px; }
 .lista__topo { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .lista h2 { margin: 0; font-size: 24px; font-weight: 500; letter-spacing: -.02em; }
-.lista__intro { margin: 10px 0 8px; font-size: 15px; color: var(--fg-2); }
-.bloco { padding: 18px 0; border-top: 1px solid var(--rule); }
-.lista__intro + .trilha .bloco:first-child { margin-top: 12px; }
-.bloco h3 { margin: 0 0 8px; font-size: 16px; font-weight: 600; display: flex; justify-content: space-between; gap: 12px; }
-.bloco h3 span { font: 400 13px var(--mono); color: var(--mute); }
+.lista__intro { margin: 10px 0 0; font-size: 15px; color: var(--fg-2); }
+.parte { margin-top: 26px; }
+.parte__t { margin: 0 0 8px; font-size: 20px; font-weight: 600; letter-spacing: -.01em; color: var(--sky); }
+.bloco { padding: 12px 0; border-top: 1px solid var(--rule); }
+.bloco h4 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
 .bloco ol { list-style: none; margin: 0; padding: 0; }
-.bloco a { display: flex; align-items: center; gap: 10px; padding: 6px 0; color: var(--fg); text-decoration: none; font-size: 16px; }
+.bloco a { display: flex; align-items: center; gap: 10px; padding: 5px 0; color: var(--fg); text-decoration: none; font-size: 16px; }
 .bloco a:hover { color: var(--sky); }
 .bloco a.atual { font-weight: 600; color: var(--sky); }
 .marca { flex: none; width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid #93a1c4; }
 .marca--feita { background: var(--sky); border-color: var(--sky); }
-.bloco--depois h3 { color: var(--mute); font-weight: 500; margin-bottom: 2px; }
+.bloco--depois h4 { color: var(--mute); font-weight: 500; margin-bottom: 0; }
 .bloco--depois p { margin: 0; font-size: 14px; color: var(--mute); }
 
-@media (max-width: 900px) {
-  body { font-size: 16.5px; }
-  .app { height: auto; min-height: 100dvh; grid-template-rows: 52px auto; }
-  .topo { position: sticky; top: 0; background: #fff; z-index: 10; padding: 0 16px; }
+@media (max-width: 1040px) {
   .topo__cap { display: none; }
+}
+@media (max-width: 900px) {
+  .app { height: auto; min-height: 100dvh; grid-template-rows: 52px auto; }
+  .topo { position: sticky; top: 0; background: #fff; z-index: 10; padding: 0 12px; gap: 6px; }
+  .topo__marca { font-size: 16px; }
+  .abas { margin-left: 2px; gap: 0; }
+  .aba { padding: 5px 8px; font-size: 13.5px; }
+  .topo__lista { padding: 5px 10px; font-size: 13.5px; }
   .corpo { grid-template-columns: 1fr; }
-  .instrucao { overflow: visible; padding: 24px 16px 28px; }
-  .instrucao__in { max-width: none; margin: 0; }
-  .editor { flex: none; overflow: visible; }
-  .CodeMirror { min-height: 200px; font-size: 14px; }
-  .console { flex: none; overflow: visible; min-height: 120px; }
+  .instrucao { overflow: visible; padding: 24px 16px 24px; }
+  .pratica--codigo { display: block; }
+  .editor { overflow: visible; }
+  .CodeMirror { height: auto; min-height: 180px; font-size: 14px; }
+  .console { overflow: visible; min-height: 120px; }
+  .pratica--mat { overflow: visible; padding: 18px 16px 28px; }
   .barra__atalho { display: none; }
   code { white-space: normal; }
+}
+@media (max-width: 400px) {
+  .topo__marca { display: none; }
 }
 </style>
 </head>
@@ -137,29 +192,36 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 3vw, 40px); font-weight: 500; li
   <header class="topo">
     <span class="topo__marca">Scaffold</span>
     <span class="topo__cap" id="capitulo"></span>
+    <nav class="abas" aria-label="Partes do capítulo">
+      <a class="aba" href="#letras/0" data-parte="matematica">Matemática</a>
+      <a class="aba" href="#programa/0" data-parte="programacao">Programação</a>
+    </nav>
     <button class="topo__lista" id="abrir-lista">Lições</button>
   </header>
   <main class="corpo">
     <section class="instrucao">
-      <div class="instrucao__in">
-        <p class="licao-n" id="licao-n"></p>
-        <h1 id="licao-t"></h1>
-        <nav class="passos" id="passos" aria-label="Passos desta lição"></nav>
-        <div class="texto" id="texto"></div>
-        <div class="tarefa"><h2>Sua vez</h2><p id="tarefa"></p></div>
-        <div class="ajudas">
-          <button class="link" id="ver-dica">Ver uma dica</button>
-          <button class="link" id="ver-solucao" hidden>Ver a solução</button>
-        </div>
-        <div class="dica" id="dica" hidden></div>
-        <pre class="solucao" id="solucao" hidden></pre>
-        <a class="voltar" id="voltar" hidden>Voltar ao passo anterior</a>
+      <p class="licao-n" id="licao-n"></p>
+      <h1 id="licao-t"></h1>
+      <nav class="passos" id="passos" aria-label="Passos desta lição"></nav>
+      <aside class="porque" id="porque"><h2>Por que esta lição</h2><p id="porque-t"></p></aside>
+      <div class="texto" id="texto"></div>
+      <div class="tarefa" id="tarefa-box"><h2>Sua vez</h2><p id="tarefa"></p></div>
+      <div class="ajudas">
+        <button class="link" id="ver-dica">Ver uma dica</button>
+        <button class="link" id="ver-solucao" hidden>Ver a solução</button>
+      </div>
+      <div class="dica" id="dica" hidden></div>
+      <pre class="solucao" id="solucao" hidden></pre>
+      <div class="navega">
+        <a id="voltar" hidden>Voltar ao passo anterior</a>
+        <a id="pular" hidden>Pular este passo</a>
       </div>
     </section>
-    <section class="pratica" aria-label="Editor de código">
+
+    <section class="pratica pratica--codigo" id="pratica-codigo" aria-label="Editor de código">
       <div class="editor" id="editor"></div>
       <div class="barra">
-        <button class="botao" id="rodar">Rodar</button>
+        <button class="botao" id="rodar">Executar</button>
         <button class="barra__rec" id="recomecar">Recomeçar</button>
         <span class="estado" id="estado" role="status"></span>
         <span class="barra__atalho">Ctrl + Enter</span>
@@ -171,12 +233,24 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 3vw, 40px); font-weight: 500; li
         <img class="figura" id="figura" alt="O gráfico desenhado pelo seu código" hidden>
       </div>
     </section>
+
+    <section class="pratica pratica--mat" id="pratica-mat" aria-label="Exercício" hidden>
+      <div class="mat__in" id="mat-in">
+        <div class="fig" id="fig"></div>
+        <div class="cartao">
+          <h2>Sua vez</h2>
+          <p id="tarefa-mat"></p>
+          <div id="respostas"></div>
+          <div class="resultado" id="resultado-mat" role="status" hidden></div>
+        </div>
+      </div>
+    </section>
   </main>
 </div>
 <div class="fundo" id="fundo" hidden></div>
 <aside class="lista" id="lista" aria-label="Lições do capítulo" hidden>
-  <div class="lista__topo"><h2>Capítulo 1: o micrograd</h2><button class="link" id="lista-fechar">Fechar</button></div>
-  <p class="lista__intro">Não precisa saber programar nem lembrar da matemática. Aqui está o que a primeira aula de <a href="https://www.youtube.com/playlist?list=PLAqhIrjkxbuWI23v9cThsA9GvCAUhRvKZ" target="_blank" rel="noopener"><span id="curso"></span></a>, de Andrej Karpathy, assume que você já sabe, e o Python vem junto. Cada bloco termina no minuto da aula em que aquilo aparece.</p>
+  <div class="lista__topo"><h2>Capítulo 1</h2><button class="link" id="lista-fechar">Fechar</button></div>
+  <p class="lista__intro">A matemática e a programação para compreender a <a id="link-aula" target="_blank" rel="noopener">primeira aula</a> de <a id="link-curso" target="_blank" rel="noopener">Neural Networks: Zero to Hero</a>, de Andrej Karpathy. Não é preciso saber nada antes. As duas partes são independentes: comece pela que quiser.</p>
   <div class="trilha" id="trilha"></div>
 </aside>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>

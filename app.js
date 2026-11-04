@@ -1,8 +1,11 @@
-import { BLOCOS, CAPITULO, linkVideo } from './licoes.js'
+import { PARTES, CAPITULO } from './licoes.js'
+import { montarFigura } from './figuras.js'
 
 const $ = (s) => document.querySelector(s)
-const LICOES = BLOCOS.flatMap((b) => b.licoes)
-const CHAVE = 'scaffold_v1'
+const LICOES = PARTES.flatMap((p) => p.modulos.flatMap((m) => m.licoes))
+const licoesDa = (parte) => parte.modulos.flatMap((m) => m.licoes)
+const parteDe = (l) => PARTES.find((p) => licoesDa(p).includes(l))
+const CHAVE = 'scaffold_v2'
 const LIMITE_MS = 10000
 
 // ── Progresso: só neste aparelho. A página funciona mesmo sem armazenamento.
@@ -14,6 +17,7 @@ const guardar = () => { try { localStorage.setItem(CHAVE, JSON.stringify(salvo))
 let licao = LICOES[0], passoI = 0, erros = 0, rodando = false
 const idDoPasso = (l, i) => `${l.id}.${i}`
 const passo = () => licao.passos[passoI]
+const ehCodigo = (p) => p.inicio !== undefined
 
 function lerHash() {
   const [id, i] = location.hash.slice(1).split('/')
@@ -21,9 +25,9 @@ function lerHash() {
   if (l) { licao = l; passoI = Math.min(Math.max(Number(i) || 0, 0), l.passos.length - 1); return true }
   return false
 }
-function primeiroPorFazer() {
-  for (const l of LICOES) for (let i = 0; i < l.passos.length; i++) if (!salvo.feito[idDoPasso(l, i)]) return [l, i]
-  return [LICOES[0], 0]
+function primeiroPorFazer(lista = LICOES) {
+  for (const l of lista) for (let i = 0; i < l.passos.length; i++) if (!salvo.feito[idDoPasso(l, i)]) return [l, i]
+  return [lista[0], 0]
 }
 const ir = (l, i) => { location.hash = `${l.id}/${i}` }
 function seguinte() {
@@ -42,18 +46,20 @@ const editor = CodeMirror($('#editor'), {
   mode: 'python', theme: 'noite', lineNumbers: true, indentUnit: 4, tabSize: 4, viewportMargin: Infinity,
   extraKeys: {
     Tab: (cm) => cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection('    '),
-    'Ctrl-Enter': () => rodar(), 'Cmd-Enter': () => rodar(),
+    'Ctrl-Enter': () => executar(), 'Cmd-Enter': () => executar(),
   },
 })
+let carregandoPasso = false
 editor.on('change', () => {
+  if (carregandoPasso || !ehCodigo(passo())) return
   const id = idDoPasso(licao, passoI)
   if (editor.getValue() === passo().inicio) delete salvo.codigo[id]
   else salvo.codigo[id] = editor.getValue()
   guardar()
 })
 
-// ── O Python
-let worker, python = 'carregando', vigia = null, idAtual = 0, pendente = null
+// ── O Python: só abre quando a pessoa chega a um passo de programação.
+let worker = null, python = 'fechado', vigia = null, idAtual = 0
 function abrirPython() {
   python = 'carregando'
   worker = new Worker('worker.js')
@@ -61,44 +67,44 @@ function abrirPython() {
     if (data.tipo === 'pronto') { python = 'pronto'; mostrarEstadoPython() }
     else if (data.tipo === 'falhou') { python = 'falhou'; mostrarEstadoPython() }
     else if (data.id !== idAtual) return
-    else if (data.tipo === 'carregando') aviso(python === 'pronto' ? 'Rodando…' : 'Preparando o Python…')
-    else if (data.tipo === 'executando') { vigia = setTimeout(estourou, LIMITE_MS); aviso('Rodando…') }
+    else if (data.tipo === 'executando') { vigia = setTimeout(estourou, LIMITE_MS); aviso('Executando…') }
     else if (data.tipo === 'resultado') { clearTimeout(vigia); terminou(data.res) }
   }
   worker.onerror = () => { python = 'falhou'; mostrarEstadoPython() }
 }
 function mostrarEstadoPython() {
-  const b = $('#rodar')
-  if (python === 'falhou') { aviso('O Python não carregou. Confira a internet e recarregue a página.'); b.disabled = true; return }
-  if (!rodando && python === 'pronto' && !$('#saida').textContent.trim()) aviso('')
+  if (python === 'falhou') { aviso('O Python não carregou. Confira a internet e recarregue a página.'); $('#rodar').disabled = true; return }
+  if (!rodando && python === 'pronto') aviso('')
 }
 function estourou() {
   worker.terminate()
   abrirPython()
   fimDeRodada()
   $('#saida').textContent = ''
-  mostrarResultado('erro', 'O código rodou por mais de 10 segundos e foi parado. Algum laço pode não ter fim.')
+  mostrarResultado($('#resultado'), 'erro', 'O código ficou executando por mais de 10 segundos e foi parado. Alguma repetição pode não ter fim.')
 }
 const aviso = (t) => { $('#estado').textContent = t }
 
 const AJUDA_ERRO = {
-  SyntaxError: 'O Python não entendeu a escrita desta linha. Veja se falta um parêntese, os dois-pontos ou um sinal.',
-  IndentationError: 'O recuo está errado. A linha dentro de uma função começa com 4 espaços.',
+  SyntaxError: 'O Python não entendeu a escrita desta linha. Veja se falta um parêntese, os dois-pontos, as aspas ou um sinal.',
+  IndentationError: 'O recuo está errado. A linha dentro de uma função ou de um for começa com 4 espaços.',
   TabError: 'O recuo está misturado. Use só espaços.',
-  NameError: 'O Python não conhece este nome. Veja se foi escrito igual em todos os lugares e se foi criado antes de ser usado.',
+  NameError: 'O Python não conhece este nome. Veja se foi escrito igual em todos os lugares, se foi criado antes de ser usado, e se um texto ficou sem aspas.',
   TypeError: 'A conta recebeu algo de um tipo que ela não aceita. Veja se a função tem um return.',
   ZeroDivisionError: 'Houve uma divisão por zero.',
+  IndexError: 'A lista não tem essa posição. Lembre que a contagem começa do zero.',
   ModuleNotFoundError: 'Esta biblioteca não existe aqui. Confira o nome no import.',
 }
 
-function rodar() {
-  if (rodando || python === 'falhou') return
+function executar() {
+  if (rodando || python === 'falhou' || !ehCodigo(passo())) return
+  if (!worker) abrirPython()
   rodando = true
   $('#rodar').disabled = true
   $('#saida').textContent = ''
   $('#figura').hidden = true
   $('#resultado').hidden = true
-  aviso(python === 'pronto' ? 'Rodando…' : 'Preparando o Python (só na primeira vez, leva alguns segundos)…')
+  aviso(python === 'pronto' ? 'Executando…' : 'Preparando o Python (só na primeira vez, leva alguns segundos)…')
   idAtual++
   worker.postMessage({ id: idAtual, codigo: editor.getValue(), checagem: passo().checagem })
 }
@@ -107,29 +113,102 @@ function fimDeRodada() {
   $('#rodar').disabled = false
   aviso('')
 }
+function marcarFeito() {
+  salvo.feito[idDoPasso(licao, passoI)] = true
+  guardar()
+  desenharPontos()
+  desenharLista()
+}
+function errou() {
+  erros++
+  if (erros >= 2) $('#ver-solucao').hidden = false
+}
 function terminou(r) {
   fimDeRodada()
   $('#saida').textContent = r.saida
   if (r.figura) { $('#figura').src = 'data:image/png;base64,' + r.figura; $('#figura').hidden = false }
   if (r.ok) {
-    salvo.feito[idDoPasso(licao, passoI)] = true
-    guardar()
-    mostrarResultado('ok')
-    desenharProgresso()
+    marcarFeito()
+    mostrarResultado($('#resultado'), 'ok')
     return
   }
-  erros++
-  if (erros >= 2) $('#ver-solucao').hidden = false
+  errou()
   if (r.erro) {
     const onde = r.erro.linha ? `Linha ${r.erro.linha}. ` : ''
     const ajuda = AJUDA_ERRO[r.erro.tipo] || 'O código parou com um erro.'
-    mostrarResultado('erro', `${onde}${ajuda}`, `${r.erro.tipo}: ${r.erro.msg}`)
-  } else mostrarResultado('erro', r.falha)
+    mostrarResultado($('#resultado'), 'erro', `${onde}${ajuda}`, `${r.erro.tipo}: ${r.erro.msg}`)
+  } else mostrarResultado($('#resultado'), 'erro', r.falha)
 }
 
-// ── O resultado e o encaixe com a aula
-function mostrarResultado(tipo, msg, tecnico) {
-  const box = $('#resultado')
+// ── A matemática: campos para preencher ou opções para escolher
+const lerNumero = (t) => Number(t.trim().replace(/\s/g, '').replace(',', '.').replace('−', '-'))
+function montarExercicio(p) {
+  const cx = $('#respostas')
+  cx.textContent = ''
+  $('#resultado-mat').hidden = true
+  if (p.opcoes) {
+    p.opcoes.forEach((o) => {
+      const b = document.createElement('button')
+      b.type = 'button'
+      b.className = 'opcao'
+      b.textContent = o.t
+      b.onclick = () => {
+        if (o.certa) {
+          cx.querySelectorAll('.opcao').forEach((x) => { x.disabled = true })
+          b.classList.add('opcao--certa')
+          marcarFeito()
+          mostrarResultado($('#resultado-mat'), 'ok')
+        } else {
+          b.classList.add('opcao--errada')
+          errou()
+          mostrarResultado($('#resultado-mat'), 'erro', o.por || p.erro)
+        }
+      }
+      cx.append(b)
+    })
+    return
+  }
+  const f = document.createElement('form')
+  f.className = 'campos'
+  f.noValidate = true
+  p.campos.forEach((c, i) => {
+    const l = document.createElement('label')
+    l.className = 'campo'
+    const s = document.createElement('span')
+    s.textContent = c.rotulo
+    const inp = document.createElement('input')
+    Object.assign(inp, { type: 'text', inputMode: 'text', autocomplete: 'off' })
+    inp.dataset.i = i
+    l.append(s, inp)
+    f.append(l)
+  })
+  const b = document.createElement('button')
+  b.className = 'botao botao--verificar'
+  b.id = 'verificar'
+  b.textContent = 'Verificar'
+  f.append(b)
+  f.onsubmit = (e) => {
+    e.preventDefault()
+    const inputs = [...f.querySelectorAll('input')]
+    let vazio = false, certo = true
+    inputs.forEach((inp, i) => {
+      const t = inp.value.trim()
+      if (!t) vazio = true
+      const ok = t && Math.abs(lerNumero(t) - p.campos[i].resposta) < 1e-6
+      if (!ok) certo = false
+      inp.classList.toggle('campo--errado', !!t && !ok)
+      inp.classList.toggle('campo--certo', !!ok)
+    })
+    if (vazio && !certo) { mostrarResultado($('#resultado-mat'), 'erro', inputs.length > 1 ? 'Preencha todos os campos.' : 'Escreva a sua resposta.'); return }
+    if (certo) { marcarFeito(); mostrarResultado($('#resultado-mat'), 'ok'); return }
+    errou()
+    mostrarResultado($('#resultado-mat'), 'erro', p.erro)
+  }
+  cx.append(f)
+}
+
+// ── O resultado
+function mostrarResultado(box, tipo, msg, tecnico) {
   box.hidden = false
   box.className = `resultado resultado--${tipo}`
   box.textContent = ''
@@ -137,89 +216,115 @@ function mostrarResultado(tipo, msg, tecnico) {
   if (tipo === 'erro') {
     add('p', msg, 'resultado__t')
     if (tecnico) add('p', tecnico, 'resultado__tec')
-  } else {
-    const fimDaLicao = passoI === licao.passos.length - 1
-    add('p', 'Certo.', 'resultado__t')
-    if (fimDaLicao && licao.naAula) {
-      const c = add('div', null, 'aula')
-      c.innerHTML = '<p class="aula__t">Na aula do Karpathy</p>'
-      const p = document.createElement('p'); p.textContent = licao.naAula; c.append(p)
-    }
-    if (fimDaLicao && licao.assistir) {
-      const c = add('div', null, 'aula aula--assistir')
-      c.innerHTML = '<p class="aula__t"></p><p class="aula__d"></p><a class="botao botao--claro" target="_blank" rel="noopener">Assistir no YouTube</a>'
-      c.querySelector('.aula__t').textContent = licao.assistir.texto
-      c.querySelector('.aula__d').textContent = licao.assistir.detalhe
-      c.querySelector('a').href = linkVideo(licao.assistir.inicio)
-    }
-    const s = seguinte()
-    if (s) {
-      const b = add('button', fimDaLicao ? `Próxima lição: ${s[0].titulo}` : 'Próximo passo', 'botao')
-      b.id = 'avancar'
-      b.onclick = () => ir(...s)
-      if (matchMedia('(max-width: 900px)').matches) box.scrollIntoView({ block: 'nearest', behavior: 'auto' })
-    }
+    return
   }
+  const fimDaLicao = passoI === licao.passos.length - 1
+  add('p', 'Certo.', 'resultado__t')
+  if (passo().certo) add('p', passo().certo, 'resultado__nota')
+  const s = seguinte()
+  if (s) {
+    const b = add('button', fimDaLicao ? `Próxima lição: ${s[0].titulo}` : 'Próximo passo', 'botao')
+    b.id = 'avancar'
+    b.type = 'button'
+    b.onclick = () => ir(...s)
+  } else add('p', 'Você chegou ao fim do que está pronto por enquanto.', 'resultado__nota')
+  if (matchMedia('(max-width: 900px)').matches) box.scrollIntoView({ block: 'nearest' })
 }
 
 // ── A tela de um passo
+function desenharPontos() {
+  $('#passos').innerHTML = licao.passos.map((_, i) => `<a href="#${licao.id}/${i}" class="ponto${i === passoI ? ' ponto--atual' : ''}${salvo.feito[idDoPasso(licao, i)] ? ' ponto--feito' : ''}" aria-label="Passo ${i + 1} de ${licao.passos.length}"></a>`).join('')
+}
 function desenharPasso() {
   const p = passo()
+  const parte = parteDe(licao)
   erros = 0
-  const iLicao = LICOES.indexOf(licao) + 1
   document.title = `${licao.titulo} · Scaffold`
-  $('#licao-n').textContent = `Lição ${iLicao} de ${LICOES.length}`
+  document.querySelectorAll('.aba').forEach((a) => a.classList.toggle('aba--atual', a.dataset.parte === parte.id))
+  const nDaParte = licoesDa(parte).indexOf(licao) + 1
+  $('#licao-n').textContent = `${parte.titulo}, lição ${nDaParte} de ${licoesDa(parte).length}`
   $('#licao-t').textContent = licao.titulo
+  // O contexto da aula abre a lição: aparece só no primeiro passo.
+  $('#porque').hidden = passoI !== 0
+  $('#porque-t').textContent = licao.porque
   $('#texto').innerHTML = p.texto
-  $('#tarefa').innerHTML = p.tarefa
-  $('#passos').innerHTML = licao.passos.map((_, i) => `<a href="#${licao.id}/${i}" class="ponto${i === passoI ? ' ponto--atual' : ''}${salvo.feito[idDoPasso(licao, i)] ? ' ponto--feito' : ''}" aria-label="Passo ${i + 1}"></a>`).join('')
+  desenharPontos()
   $('#dica').hidden = true
   $('#dica').innerHTML = p.dica
   $('#solucao').hidden = true
   $('#solucao').textContent = p.solucao
   $('#ver-solucao').hidden = true
-  $('#saida').textContent = ''
-  $('#figura').hidden = true
-  $('#resultado').hidden = true
-  const ant = anterior()
+  const ant = anterior(), seg = seguinte()
   $('#voltar').hidden = !ant
   if (ant) $('#voltar').href = `#${ant[0].id}/${ant[1]}`
-  editor.setValue(salvo.codigo[idDoPasso(licao, passoI)] ?? p.inicio)
-  editor.clearHistory()
+  $('#pular').hidden = !seg
+  if (seg) $('#pular').href = `#${seg[0].id}/${seg[1]}`
+
+  const codigo = ehCodigo(p)
+  $('#pratica-codigo').hidden = !codigo
+  $('#pratica-mat').hidden = codigo
+  $('#tarefa-box').hidden = !codigo
+  if (codigo) {
+    $('#tarefa').innerHTML = p.tarefa
+    $('#saida').textContent = ''
+    $('#figura').hidden = true
+    $('#resultado').hidden = true
+    carregandoPasso = true
+    editor.setValue(salvo.codigo[idDoPasso(licao, passoI)] ?? p.inicio)
+    editor.clearHistory()
+    carregandoPasso = false
+    if (!worker) abrirPython()
+    requestAnimationFrame(() => editor.refresh())
+  } else {
+    $('#tarefa-mat').innerHTML = p.tarefa
+    $('#mat-in').classList.toggle('mat__in--fig', !!p.figura)
+    montarFigura($('#fig'), p.figura)
+    montarExercicio(p)
+    $('#pratica-mat').scrollTop = 0
+  }
   $('.instrucao').scrollTop = 0
   window.scrollTo(0, 0)
-  desenharProgresso()
-  requestAnimationFrame(() => editor.refresh())
+  desenharLista()
 }
 
 // ── A lista de lições
-function desenharProgresso() {
-  $('#trilha').innerHTML = BLOCOS.map((b) => `
-    <section class="bloco${b.licoes.length ? '' : ' bloco--depois'}">
-      <h3>${b.titulo} <span>${b.tempo}</span></h3>
-      ${b.licoes.length ? `<ol>${b.licoes.map((l) => {
-        const feitos = l.passos.filter((_, i) => salvo.feito[idDoPasso(l, i)]).length
-        const tudo = feitos === l.passos.length
-        return `<li><a href="#${l.id}/0" class="${l === licao ? 'atual' : ''}"><span class="marca${tudo ? ' marca--feita' : ''}" aria-hidden="true"></span>${l.titulo}${tudo ? '<span class="sr"> (feita)</span>' : ''}</a></li>`
-      }).join('')}</ol>` : `<p>${b.topicos}. Em breve.</p>`}
+function desenharLista() {
+  $('#trilha').innerHTML = PARTES.map((parte) => `
+    <section class="parte">
+      <h3 class="parte__t">${parte.titulo}</h3>
+      ${parte.modulos.map((m) => `
+        <div class="bloco${m.licoes.length ? '' : ' bloco--depois'}">
+          <h4>${m.titulo}</h4>
+          ${m.licoes.length ? `<ol>${m.licoes.map((l) => {
+            const tudo = l.passos.every((_, i) => salvo.feito[idDoPasso(l, i)])
+            return `<li><a href="#${l.id}/0" class="${l === licao ? 'atual' : ''}"><span class="marca${tudo ? ' marca--feita' : ''}" aria-hidden="true"></span>${l.titulo}${tudo ? '<span class="sr"> (feita)</span>' : ''}</a></li>`
+          }).join('')}</ol>` : `<p>${m.topicos}. Em breve.</p>`}
+        </div>`).join('')}
     </section>`).join('')
 }
 const abrirLista = (sim) => { $('#lista').hidden = !sim; $('#fundo').hidden = !sim; if (sim) $('#lista-fechar').focus() }
 
 // ── Começar
 $('#capitulo').textContent = CAPITULO.titulo
-$('#curso').textContent = CAPITULO.curso
-$('#rodar').onclick = rodar
+$('#link-curso').href = CAPITULO.curso
+$('#link-aula').href = CAPITULO.aula
+document.querySelectorAll('.aba').forEach((a) => {
+  a.onclick = (e) => {
+    e.preventDefault()
+    const parte = PARTES.find((p) => p.id === a.dataset.parte)
+    ir(...primeiroPorFazer(licoesDa(parte)))
+  }
+})
+$('#rodar').onclick = executar
 $('#recomecar').onclick = () => { editor.setValue(passo().inicio); $('#saida').textContent = ''; $('#figura').hidden = true; $('#resultado').hidden = true }
 $('#ver-dica').onclick = () => { $('#dica').hidden = false }
 $('#ver-solucao').onclick = () => { $('#solucao').hidden = false }
 $('#abrir-lista').onclick = () => abrirLista(true)
 $('#lista-fechar').onclick = () => abrirLista(false)
 $('#fundo').onclick = () => abrirLista(false)
-$('#lista').addEventListener('click', (e) => { if (e.target.closest('a')) abrirLista(false) })
+$('#lista').addEventListener('click', (e) => { if (e.target.closest('#trilha a')) abrirLista(false) })
 addEventListener('keydown', (e) => { if (e.key === 'Escape') abrirLista(false) })
 addEventListener('hashchange', () => { if (lerHash()) desenharPasso() })
 
-abrirPython()
 if (!lerHash()) [licao, passoI] = primeiroPorFazer()
 desenharPasso()
