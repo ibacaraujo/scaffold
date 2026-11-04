@@ -68,11 +68,11 @@ export function montarFigura(el, s) {
     caixa.className = 'fig__maquina'
     let x = s.inicial
     const desenha = () => {
-      caixa.innerHTML = `<div class="fig__mq"><span>entra</span><strong>${fmt(x)}</strong></div>
+      caixa.innerHTML = `<div class="fig__mq"><span>recebe</span><strong>${fmt(x)}</strong></div>
         <div class="fig__mq fig__mq--regra">${s.regra}</div>
-        <div class="fig__mq fig__mq--sai"><span>sai</span><strong>${fmt(s.f(x))}</strong></div>`
+        <div class="fig__mq fig__mq--sai"><span>resulta</span><strong>${fmt(s.f(x))}</strong></div>`
     }
-    el.append(caixa, controle('Entrada', s.min, s.max, s.passo, x, (v) => { x = v; desenha() }))
+    el.append(caixa, controle('Valor recebido', s.min, s.max, s.passo, x, (v) => { x = v; desenha() }))
     desenha()
     return
   }
@@ -105,9 +105,9 @@ export function montarFigura(el, s) {
       const { p, px, py } = base(s.x, s.y, s.f)
       p.push(ponto(px(x), py(s.f(x))))
       svg.innerHTML = p.join('')
-      leitura.textContent = `Entrada x = ${fmt(x)}, altura = ${fmt(s.f(x))}`
+      leitura.textContent = `Recebe ${fmt(x)}, resulta ${fmt(s.f(x))}`
     }
-    controles.append(controle('Entrada', s.min, s.max, s.passo, x, (v) => { x = v; desenha() }))
+    controles.append(controle('Valor recebido', s.min, s.max, s.passo, x, (v) => { x = v; desenha() }))
     desenha()
   } else if (s.modo === 'dois') {
     const e = { a: s.a, b: s.b }

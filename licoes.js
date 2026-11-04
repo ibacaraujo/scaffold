@@ -19,11 +19,11 @@ export const PARTES = [
     titulo: 'Matemática',
     modulos: [
       {
-        titulo: 'Contas com letras',
+        titulo: 'Variáveis e contas',
         licoes: [
           {
             id: 'letras',
-            titulo: 'Letras no lugar de números',
+            titulo: 'O que é uma variável',
             porque: 'Karpathy mostra que uma rede neural é, no fundo, uma expressão matemática grande, cheia de letras que guardam números. Quando a rede aprende, esses números mudam.',
             passos: [
               {
@@ -88,12 +88,12 @@ export const PARTES = [
           {
             id: 'funcao',
             titulo: 'O que é uma função',
-            porque: 'A aula começa por uma função, e tudo parte dela: uma rede neural também é uma função. Entram dados, sai um resultado.',
+            porque: 'A aula começa por uma função, e tudo parte dela: uma rede neural também é uma função. Ela recebe dados e dá um resultado.',
             passos: [
               {
-                texto: `<p>Uma função é uma regra: <strong>entra um número, sai um número.</strong></p>
+                texto: `<p>Uma função é uma regra: <strong>recebe um valor de entrada e dá um resultado no final.</strong> Por exemplo: recebe 1, resulta 3.</p>
 <p>Damos um nome à regra, normalmente <code>f</code>. Escrevemos <code>f(x) = 2x + 1</code>, e lemos "f de x é igual a 2x mais 1".</p>
-<p>Mexa no controle à direita e veja o que sai para cada número que entra.</p>`,
+<p>Mexa no controle à direita e veja o resultado para cada valor que a função recebe.</p>`,
                 tarefa: 'Quanto vale a função nestas entradas?',
                 figura: { modo: 'maquina', regra: 'f(x) = 2x + 1', f: (x) => 2 * x + 1, min: -5, max: 5, passo: 1, inicial: 3 },
                 campos: [{ rotulo: 'f(4) =', resposta: 9 }, { rotulo: 'f(0) =', resposta: 1 }],
@@ -102,18 +102,18 @@ export const PARTES = [
                 solucao: 'f(4) = 2 · 4 + 1 = 9\nf(0) = 2 · 0 + 1 = 1',
               },
               {
-                texto: `<p>A regra só precisa cumprir uma condição: para cada entrada, <strong>uma única saída</strong>. Se a mesma entrada pudesse dar dois resultados, não saberíamos qual usar.</p>
-<p>Duas entradas diferentes dando a mesma saída é permitido: <code>2²</code> e <code>(-2)²</code> dão 4.</p>`,
+                texto: `<p>A regra só precisa cumprir uma condição: para cada valor recebido, <strong>um único resultado</strong>. Se o mesmo valor pudesse dar dois resultados, não saberíamos qual usar.</p>
+<p>Dois valores diferentes darem o mesmo resultado é permitido: <code>2²</code> e <code>(-2)²</code> dão 4.</p>`,
                 tarefa: 'Qual destas tabelas <strong>não</strong> pode ser uma função?',
                 opcoes: [
-                  { t: 'Entra 1, sai 5. Entra 2, sai 5. Entra 3, sai 5.', por: 'Esta pode: cada entrada tem uma só saída. Todas darem 5 não é problema.' },
-                  { t: 'Entra 1, sai 5. Entra 1, sai 7. Entra 2, sai 9.', certa: true },
-                  { t: 'Entra 1, sai 2. Entra 2, sai 4. Entra 3, sai 6.', por: 'Esta pode: cada entrada tem uma só saída.' },
+                  { t: 'Recebe 1, resulta 5. Recebe 2, resulta 5. Recebe 3, resulta 5.', por: 'Esta pode: cada valor recebido tem um só resultado. Todos darem 5 não é problema.' },
+                  { t: 'Recebe 1, resulta 5. Recebe 1, resulta 7. Recebe 2, resulta 9.', certa: true },
+                  { t: 'Recebe 1, resulta 2. Recebe 2, resulta 4. Recebe 3, resulta 6.', por: 'Esta pode: cada valor recebido tem um só resultado.' },
                 ],
-                erro: 'Procure uma entrada que apareça com duas saídas diferentes.',
-                dica: 'Olhe se algum número de entrada aparece duas vezes.',
-                solucao: 'A segunda: a entrada 1 tem duas saídas, 5 e 7.',
-                certo: 'A entrada 1 tem duas saídas, então não é função.',
+                erro: 'Procure um valor recebido que apareça com dois resultados diferentes.',
+                dica: 'Olhe se algum valor recebido aparece duas vezes.',
+                solucao: 'A segunda: ao receber 1, ela tem dois resultados, 5 e 7.',
+                certo: 'Ao receber 1, ela tem dois resultados, então não é função.',
               },
             ],
           },
@@ -137,8 +137,8 @@ export const PARTES = [
                 solucao: '3 para a direita e 1 para cima.',
               },
               {
-                texto: `<p>O <strong>gráfico</strong> de uma função é o desenho de todos os pontos <code>(x, f(x))</code>: a entrada para os lados, a saída para cima.</p>
-<p>À direita está <code>f(x) = x²</code>. Mova a entrada e acompanhe o ponto sobre a curva.</p>`,
+                texto: `<p>O <strong>gráfico</strong> de uma função é o desenho de todos os pontos <code>(x, f(x))</code>: o valor recebido para os lados, o resultado para cima.</p>
+<p>À direita está <code>f(x) = x²</code>. Mude o valor recebido e acompanhe o ponto sobre a curva.</p>`,
                 tarefa: 'Leia no gráfico.',
                 figura: { modo: 'ponto', f: (x) => x * x, x: [-3, 3], y: [-1, 9], min: -3, max: 3, passo: 0.5, inicial: 1, nome: 'x²' },
                 campos: [{ rotulo: 'Em x = 2, a altura da curva é', resposta: 4 }, { rotulo: 'A curva é mais baixa em x =', resposta: 0 }],
@@ -177,7 +177,7 @@ export const PARTES = [
                 figura: { modo: 'dois', f: (x) => -3 * x + 4, x: [-2, 4], y: [-8, 10], a: 0, b: 2, nome: '-3x + 4' },
                 campos: [{ rotulo: 'Inclinação =', resposta: -3 }],
                 erro: 'Quando a reta desce, o "subiu" é negativo.',
-                dica: 'De x = 0 até x = 2, a saída vai de 4 até -2.',
+                dica: 'De x = 0 até x = 2, o resultado vai de 4 até -2.',
                 solucao: 'Subiu: -2 - 4 = -6\nAndou: 2\nInclinação: -6 ÷ 2 = -3',
               },
             ],
@@ -408,9 +408,9 @@ if pontos != 30:
             porque: 'A função que aparece na matemática também se escreve em código, e a aula faz isso logo no começo. Depois, a rede inteira é organizada em pedaços com nome.',
             passos: [
               {
-                texto: `<p>Quando uma conta se repete, damos um nome a ela com <code>def</code>. Assim nasce uma função: entra um valor, sai um valor.</p>
-<p>Repare nos dois-pontos no fim da primeira linha, no recuo de 4 espaços na linha de baixo, e no <code>return</code>, que diz o que sai.</p>
-<p>Para usar a função, escrevemos o nome e a entrada entre parênteses: <code>dobro(5)</code>. Isso se chama <strong>chamar</strong> a função.</p>`,
+                texto: `<p>Quando uma conta se repete, damos um nome a ela com <code>def</code>. Assim nasce uma função: ela recebe um valor e dá um resultado.</p>
+<p>Repare nos dois-pontos no fim da primeira linha, no recuo de 4 espaços na linha de baixo, e no <code>return</code>, que diz qual é o resultado.</p>
+<p>Para usar a função, escrevemos o nome e o valor entre parênteses: <code>dobro(5)</code>. Isso se chama <strong>chamar</strong> a função.</p>`,
                 tarefa: 'Abaixo de <code>dobro</code>, escreva a função <code>triplo</code> e mostre <code>triplo(4)</code>.',
                 inicio: `def dobro(numero):\n    return numero * 2\n\nprint(dobro(5))\n`,
                 dica: 'Copie a forma de <code>dobro</code>, mudando o nome e a conta. Depois, <code>print(triplo(4))</code>.',
