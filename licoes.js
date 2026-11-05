@@ -156,7 +156,7 @@ export const PARTES = [
           {
             id: 'reta',
             titulo: 'A inclinação de uma reta',
-            porque: 'A pergunta que atravessa a aula é esta: se eu mudar um pouco esta entrada, quanto muda a saída? A inclinação é a resposta para essa pergunta.',
+            porque: 'A pergunta que atravessa a aula é esta: se eu mudar um pouco o valor recebido, quanto muda o resultado? A inclinação é a resposta para essa pergunta.',
             passos: [
               {
                 texto: `<p>A inclinação responde: <strong>quando andamos para a direita, quanto subimos?</strong></p>
