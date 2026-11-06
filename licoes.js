@@ -94,7 +94,7 @@ export const PARTES = [
               {
                 texto: `<p>Uma função é uma regra: <strong>recebe um valor de entrada e dá um resultado no final.</strong> Por exemplo: recebe 1, resulta 3.</p>
 <p>Damos um nome à regra, normalmente <code>f</code>. Escrevemos <code>f(x) = 2x + 1</code>, e lemos "f de x é igual a 2x mais 1".</p>
-<p>Mexa no controle à direita e veja o resultado para cada valor que a função recebe.</p>`,
+<p>Mexa no controle da figura e veja o resultado para cada valor que a função recebe.</p>`,
                 tarefa: 'Quanto vale a função nestas entradas?',
                 figura: { modo: 'maquina', regra: 'f(x) = 2x + 1', f: (x) => 2 * x + 1, min: -5, max: 5, passo: 1, inicial: 3 },
                 campos: [{ rotulo: 'f(4) =', resposta: 9 }, { rotulo: 'f(0) =', resposta: 1 }],
@@ -218,7 +218,7 @@ export const PARTES = [
             porque: 'A derivada é o centro da aula. Treinar uma rede é usar derivadas para descobrir em que direção ajustar cada número, e o programa que Karpathy constrói existe para calculá-las.',
             passos: [
               {
-                texto: `<p>Fazendo essa medida em vários pontos de <code>f(x) = x²</code>, aparece um padrão. Mova o ponto à direita e leia a inclinação.</p>
+                texto: `<p>Fazendo essa medida em vários pontos de <code>f(x) = x²</code>, aparece um padrão. Mova o ponto no gráfico e leia a inclinação.</p>
 <p>A <strong>derivada</strong> é a função que dá a inclinação em cada ponto. Ela se escreve <code>f'(x)</code>, e lemos "f linha de x".</p>`,
                 tarefa: 'Leia as inclinações. Depois diga qual seria a inclinação em <code>x = 5</code>, seguindo o padrão.',
                 figura: { modo: 'tangente', f: (x) => x * x, df: (x) => 2 * x, x: [-3, 3], y: [-3, 9], min: -3, max: 3, passo: 0.5, inicial: 1, nome: 'x²' },
@@ -750,4 +750,11 @@ if saida.split() != ['6', '6', '6']:
       },
     ],
   },
+]
+
+// Todos os capítulos, em ordem. Os ids das lições são únicos no curso inteiro: o progresso é guardado por eles.
+import { CAPITULO_2 } from './capitulo2.js'
+export const CAPITULOS = [
+  { n: 1, titulo: CAPITULO.titulo, aula: CAPITULO.aula, partes: PARTES },
+  CAPITULO_2,
 ]

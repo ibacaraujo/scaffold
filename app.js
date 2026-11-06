@@ -1,17 +1,19 @@
-import { PARTES, CAPITULO } from './licoes.js'
+import { CAPITULOS } from './licoes.js'
 import { montarFigura } from './figuras.js'
 import { TRILHA, CURSO } from './trilha.js'
 import { PESQUISA } from './pesquisa.js'
 
 const $ = (s) => document.querySelector(s)
-const LICOES = PARTES.flatMap((p) => p.modulos.flatMap((m) => m.licoes))
 const licoesDa = (parte) => parte.modulos.flatMap((m) => m.licoes)
-const parteDe = (l) => PARTES.find((p) => licoesDa(p).includes(l))
-// O capítulo (antes da aula) e os exercícios de depois da aula.
-const PARTES_CAP = PARTES.filter((p) => p.id !== 'depois')
-const LICOES_CAP = PARTES_CAP.flatMap(licoesDa)
-const DEPOIS = PARTES.find((p) => p.id === 'depois')
-const LICOES_DEPOIS = licoesDa(DEPOIS)
+// Cada capítulo tem as partes de antes da aula (Matemática e Programação) e, às vezes, a de depois.
+const partesAntes = (c) => c.partes.filter((p) => p.id !== 'depois')
+const parteDepois = (c) => c.partes.find((p) => p.id === 'depois')
+const licoesAntes = (c) => partesAntes(c).flatMap(licoesDa)
+const licoesDepois = (c) => (parteDepois(c) ? licoesDa(parteDepois(c)) : [])
+const LICOES = CAPITULOS.flatMap((c) => c.partes.flatMap(licoesDa))
+const parteDe = (l) => CAPITULOS.flatMap((c) => c.partes).find((p) => licoesDa(p).includes(l))
+const capDe = (l) => CAPITULOS.find((c) => c.partes.some((p) => licoesDa(p).includes(l)))
+const capN = (n) => CAPITULOS.find((c) => c.n === n)
 const CHAVE = 'scaffold_v2'
 const LIMITE_MS = 10000
 
@@ -206,7 +208,7 @@ function montarExercicio(p) {
     inputs.forEach((inp, i) => {
       const t = inp.value.trim()
       if (!t) vazio = true
-      const ok = t && Math.abs(lerNumero(t) - p.campos[i].resposta) < 1e-6
+      const ok = t && Math.abs(lerNumero(t) - p.campos[i].resposta) < (p.campos[i].tol ?? 1e-6)
       if (!ok) certo = false
       inp.classList.toggle('campo--errado', !!t && !ok)
       inp.classList.toggle('campo--certo', !!ok)
@@ -234,24 +236,26 @@ function mostrarResultado(box, tipo, msg, tecnico) {
   add('p', 'Certo.', 'resultado__t')
   if (passo().certo) add('p', passo().certo, 'resultado__nota')
   const s = seguinte()
-  const vaiParaDepois = s && parteDe(s[0]) === DEPOIS && parteDe(licao) !== DEPOIS
-  if (vaiParaDepois) {
-    // Entre o capítulo e os exercícios fica a aula: a pessoa assiste antes de seguir.
+  const cap = capDe(licao), noDepois = parteDe(licao).id === 'depois'
+  const capSeg = s && capDe(s[0])
+  const botao = (texto, aoClicar) => { const b = add('button', texto, 'botao'); b.id = 'avancar'; b.type = 'button'; b.onclick = aoClicar; return b }
+  const vaiParaDepois = s && !noDepois && parteDe(s[0]).id === 'depois'
+  const fimDoCapitulo = !noDepois && fimDaLicao && (!s || capSeg !== cap)
+  if (vaiParaDepois || fimDoCapitulo) {
+    // Entre o capítulo e o que vem depois fica a aula: a pessoa assiste antes de seguir.
     const n = add('p', '', 'resultado__nota')
-    n.innerHTML = `Você chegou ao fim do capítulo. Agora é a vez da <a href="${CAPITULO.aula}" target="_blank" rel="noopener">aula 1 do Karpathy</a>. Depois de assistir, siga para os exercícios.`
-    const b = add('button', 'Já assisti: ir para os exercícios', 'botao')
-    b.id = 'avancar'
-    b.type = 'button'
-    b.onclick = () => { salvo.aulas[1] = true; guardar(); ir(...s) }
+    const depois = vaiParaDepois ? 'Depois de assistir, siga para os exercícios.' : s ? `Depois de assistir, siga para o Capítulo ${capSeg.n}.` : 'O próximo capítulo ainda está sendo preparado.'
+    n.innerHTML = `Você chegou ao fim do Capítulo ${cap.n}. Agora é a vez da <a href="${cap.aula}" target="_blank" rel="noopener">aula ${cap.n} do Karpathy</a>. ${depois}`
+    if (s) botao(vaiParaDepois ? 'Já assisti: ir para os exercícios' : `Já assisti: ir para o Capítulo ${capSeg.n}`, () => { salvo.aulas[cap.n] = true; guardar(); ir(...s) })
+  } else if (noDepois && fimDaLicao && (!s || capSeg !== cap)) {
+    add('p', 'Você terminou os exercícios. Que tal uma pergunta de pesquisa?', 'resultado__nota')
+    if (s) botao(`Ir para o Capítulo ${capSeg.n}`, () => ir(...s))
+    if (PESQUISA[cap.n]) { const b = add('a', 'Ver as perguntas de pesquisa', s ? 'botao botao--linha' : 'botao'); b.href = '#pesquisa'; b.style.marginLeft = s ? '10px' : '' }
   } else if (s) {
     const b = add('button', fimDaLicao ? `Próxima lição: ${s[0].titulo}` : 'Próximo passo', 'botao')
     b.id = 'avancar'
     b.type = 'button'
     b.onclick = () => ir(...s)
-  } else {
-    add('p', 'Você terminou os exercícios. Que tal uma pergunta de pesquisa?', 'resultado__nota')
-    const b = add('a', 'Ver as perguntas de pesquisa', 'botao')
-    b.href = '#pesquisa'
   }
   if (matchMedia('(max-width: 900px)').matches) box.scrollIntoView({ block: 'nearest' })
 }
@@ -265,7 +269,12 @@ function desenharPasso() {
   const parte = parteDe(licao)
   erros = 0
   document.title = `${licao.titulo} · Scaffold`
-  document.querySelectorAll('.aba').forEach((a) => a.classList.toggle('aba--atual', a.dataset.parte === parte.id))
+  const cap = capDe(licao)
+  $('#capitulo').textContent = cap.titulo
+  document.querySelectorAll('.aba').forEach((a) => {
+    a.classList.toggle('aba--atual', a.dataset.parte === parte.id)
+    a.hidden = !cap.partes.some((p) => p.id === a.dataset.parte)
+  })
   const nDaParte = licoesDa(parte).indexOf(licao) + 1
   $('#licao-n').textContent = `${parte.titulo}, lição ${nDaParte} de ${licoesDa(parte).length}`
   $('#licao-t').textContent = licao.titulo
@@ -313,8 +322,12 @@ function desenharPasso() {
 }
 
 // ── A lista de lições
-function desenharLista() {
-  $('#lista-licoes').innerHTML = PARTES.map((parte) => `
+let capDaLista = null
+function desenharLista(cap = capDaLista || capDe(licao)) {
+  $('#lista-titulo').textContent = cap.titulo
+  $('#link-aula').href = cap.aula
+  $('#link-aula').textContent = `aula ${cap.n}`
+  $('#lista-licoes').innerHTML = cap.partes.map((parte) => `
     <section class="parte">
       <h3 class="parte__t">${parte.titulo}</h3>
       ${parte.modulos.map((m) => `
@@ -327,7 +340,12 @@ function desenharLista() {
         </div>`).join('')}
     </section>`).join('')
 }
-const abrirLista = (sim) => { $('#lista').hidden = !sim; $('#fundo').hidden = !sim; if (sim) $('#lista-fechar').focus() }
+const abrirLista = (sim, n) => {
+  capDaLista = n ? capN(n) : null
+  if (sim) desenharLista()
+  $('#lista').hidden = !sim; $('#fundo').hidden = !sim
+  if (sim) $('#lista-fechar').focus()
+}
 
 // ── Início e trilha
 const contar = (lista) => {
@@ -338,11 +356,15 @@ const contar = (lista) => {
 const algumFeito = () => Object.keys(salvo.feito).length > 0
 const feito = (lista) => { const c = contar(lista); return c.feitos === c.total }
 function onde() {
-  // Primeiro o capítulo; com ele feito, os exercícios de depois da aula; com tudo feito, o começo.
-  const acabou = feito(LICOES_CAP), depoisFeito = feito(LICOES_DEPOIS)
-  const [l, i] = !acabou ? primeiroPorFazer(LICOES_CAP) : !depoisFeito ? primeiroPorFazer(LICOES_DEPOIS) : [LICOES[0], 0]
-  const [lc, ic] = primeiroPorFazer(LICOES_CAP)
-  return { l, i, href: `#${l.id}/${i}`, hrefCap: `#${lc.id}/${ic}`, comecou: algumFeito(), acabou, depoisFeito }
+  // Capítulo por capítulo: primeiro as lições de antes da aula; com elas feitas, os exercícios de depois
+  // (se o próximo capítulo ainda não começou); com tudo feito, o começo do curso.
+  const alvo = (cap, [l, i], tipo) => ({ cap, l, i, tipo, href: `#${l.id}/${i}`, comecou: algumFeito() })
+  for (const [k, c] of CAPITULOS.entries()) {
+    const prox = CAPITULOS[k + 1]
+    if (!feito(licoesAntes(c))) return alvo(c, primeiroPorFazer(licoesAntes(c)), 'cap')
+    if (licoesDepois(c).length && !feito(licoesDepois(c)) && !(prox && contar(licoesAntes(prox)).feitos)) return alvo(c, primeiroPorFazer(licoesDepois(c)), 'depois')
+  }
+  return alvo(CAPITULOS[0], [LICOES[0], 0], 'fim')
 }
 const barrinha = (c) => `<div class="barrinha"><span class="barrinha__t"><i style="width:${c.total ? Math.round(100 * c.feitos / c.total) : 0}%"></i></span>${c.feitos} de ${c.total} passos</div>`
 function cartaoCapitulo(cap) {
@@ -356,17 +378,17 @@ function cartaoCapitulo(cap) {
       </dl>
       <div class="cap__acoes"><span class="selo">Em breve</span></div>
     </article>`
-  const o = onde()
+  const c = capN(cap.n), ant = licoesAntes(c), [lc, ic] = primeiroPorFazer(ant)
   return `
     <article class="cap">
       <p class="cap__n">Capítulo ${cap.n}</p>
       <h3 class="cap__t">${cap.titulo}</h3>
       <dl class="cap__partes">
-        ${PARTES_CAP.map((p) => `<div><dt>${p.titulo}</dt><dd>${p.modulos.map((m) => m.titulo).join(', ')}</dd>${barrinha(contar(licoesDa(p)))}</div>`).join('')}
+        ${partesAntes(c).map((p) => `<div><dt>${p.titulo}</dt><dd>${p.modulos.map((m) => m.titulo).join(', ')}</dd>${barrinha(contar(licoesDa(p)))}</div>`).join('')}
       </dl>
       <div class="cap__acoes">
-        ${o.acabou ? '<span class="selo selo--ok">Capítulo feito</span>' : `<a class="botao" href="${o.hrefCap}">${o.comecou ? 'Continuar' : 'Começar'}</a>`}
-        <button class="link" type="button" data-abrir-lista>Ver as lições</button>
+        ${feito(ant) ? '<span class="selo selo--ok">Capítulo feito</span>' : `<a class="botao" href="#${lc.id}/${ic}">${contar(ant).feitos ? 'Continuar' : 'Começar'}</a>`}
+        <button class="link" type="button" data-abrir-lista="${cap.n}">Ver as lições</button>
       </div>
     </article>`
 }
@@ -386,9 +408,9 @@ function cartaoAula(cap, comCheck = true) {
     </article>`
 }
 function cartaoDepois(cap) {
-  const o = onde()
+  const dep = licoesDepois(capN(cap.n)), depoisFeito = feito(dep)
   const pq = PESQUISA[cap.n]
-  const [l, i] = primeiroPorFazer(LICOES_DEPOIS)
+  const [l, i] = primeiroPorFazer(dep)
   return `
     <article class="depois">
       <p class="cap__n">Depois da aula ${cap.n}</p>
@@ -396,9 +418,9 @@ function cartaoDepois(cap) {
       <div class="depois__par">
         <div class="depois__lado">
           <h4>Exercícios</h4>
-          <p>${LICOES_DEPOIS.map((x) => x.titulo).join(', ')}.</p>
-          ${barrinha(contar(LICOES_DEPOIS))}
-          <a class="botao" href="#${l.id}/${i}">${o.depoisFeito ? 'Rever' : contar(LICOES_DEPOIS).feitos ? 'Continuar' : 'Fazer os exercícios'}</a>
+          <p>${dep.map((x) => x.titulo).join(', ')}.</p>
+          ${barrinha(contar(dep))}
+          <a class="botao" href="#${l.id}/${i}">${depoisFeito ? 'Rever' : contar(dep).feitos ? 'Continuar' : 'Fazer os exercícios'}</a>
         </div>
         <div class="depois__lado">
           <h4>Para pesquisar</h4>
@@ -409,7 +431,8 @@ function cartaoDepois(cap) {
     </article>`
 }
 function desenharTrilha() {
-  const capFeito = (cap) => cap.pronto && onde().acabou
+  const capFeito = (cap) => cap.pronto && feito(licoesAntes(capN(cap.n)))
+  const depFeito = (cap) => feito(licoesDepois(capN(cap.n)))
   $('#linha').innerHTML = TRILHA.map((cap) => {
     const estado = cap.pronto ? ' linha__item--pronto' : ' linha__item--breve'
     return `
@@ -418,9 +441,9 @@ function desenharTrilha() {
       </li>
       <li class="linha__item linha__item--aula${estado}${salvo.aulas[cap.n] ? ' linha__item--feito' : ''}">
         <span class="linha__no" aria-hidden="true">${salvo.aulas[cap.n] ? '✓' : '<svg width="12" height="14" viewBox="0 0 12 14"><path d="M1 0l11 7-11 7z" fill="currentColor"/></svg>'}</span>${cartaoAula(cap)}
-      </li>${cap.pronto && PESQUISA[cap.n] ? `
-      <li class="linha__item linha__item--depois${onde().depoisFeito ? ' linha__item--feito' : ''}">
-        <span class="linha__no" aria-hidden="true">${onde().depoisFeito ? '✓' : '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 13l2.5-.5L13 5l-2-2-7.5 7.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'}</span>${cartaoDepois(cap)}
+      </li>${cap.pronto && PESQUISA[cap.n] && licoesDepois(capN(cap.n)).length ? `
+      <li class="linha__item linha__item--depois${depFeito(cap) ? ' linha__item--feito' : ''}">
+        <span class="linha__no" aria-hidden="true">${depFeito(cap) ? '✓' : '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 13l2.5-.5L13 5l-2-2-7.5 7.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'}</span>${cartaoDepois(cap)}
       </li>` : ''}`
   }).join('')
 }
@@ -446,12 +469,13 @@ function desenharPesquisa() {
 }
 function desenharInicio() {
   const o = onde()
-  const texto = !o.comecou ? 'Começar pelo Capítulo 1' : !o.acabou ? 'Continuar' : !o.depoisFeito ? 'Exercícios depois da aula 1' : 'Rever o Capítulo 1'
+  const texto = !o.comecou ? 'Começar pelo Capítulo 1' : o.tipo === 'cap' ? `Continuar o Capítulo ${o.cap.n}` : o.tipo === 'depois' ? `Exercícios depois da aula ${o.cap.n}` : 'Rever o Capítulo 1'
   $('#capa-seguir').textContent = texto
   $('#capa-seguir').href = o.href
-  $('#capa-onde').hidden = !o.comecou || (o.acabou && o.depoisFeito)
-  $('#capa-onde').textContent = `Você parou em: ${parteDe(o.l).titulo}, ${o.l.titulo}.`
-  $('#agora').innerHTML = cartaoCapitulo(TRILHA[0]) + cartaoAula(TRILHA[0], false) + `<div class="agora__largo">${cartaoDepois(TRILHA[0])}</div>`
+  $('#capa-onde').hidden = !o.comecou || o.tipo === 'fim'
+  $('#capa-onde').textContent = `Você parou em: Capítulo ${o.cap.n}, ${parteDe(o.l).titulo}, ${o.l.titulo}.`
+  const t = TRILHA.find((x) => x.n === o.cap.n)
+  $('#agora').innerHTML = cartaoCapitulo(t) + cartaoAula(t, false) + (licoesDepois(o.cap).length && PESQUISA[t.n] ? `<div class="agora__largo">${cartaoDepois(t)}</div>` : '')
 }
 function desenharTela() {
   const fora = tela !== 'licao'
@@ -472,17 +496,15 @@ function desenharTela() {
   desenharLista()
   window.scrollTo(0, 0)
 }
-document.addEventListener('click', (e) => { if (e.target.closest('[data-abrir-lista]')) abrirLista(true) })
+document.addEventListener('click', (e) => { const b = e.target.closest('[data-abrir-lista]'); if (b) abrirLista(true, Number(b.dataset.abrirLista) || null) })
 
 // ── Começar
 $('#capa-curso').href = CURSO
-$('#capitulo').textContent = CAPITULO.titulo
-$('#link-curso').href = CAPITULO.curso
-$('#link-aula').href = CAPITULO.aula
+$('#link-curso').href = CURSO
 document.querySelectorAll('.aba').forEach((a) => {
   a.onclick = (e) => {
     e.preventDefault()
-    const parte = PARTES.find((p) => p.id === a.dataset.parte)
+    const parte = capDe(licao).partes.find((p) => p.id === a.dataset.parte)
     ir(...primeiroPorFazer(licoesDa(parte)))
   }
 })

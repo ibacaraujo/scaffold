@@ -108,6 +108,68 @@ export function montarFigura(el, s) {
     return
   }
 
+  if (s.modo === 'barras' || s.modo === 'faixa') {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`)
+    svg.setAttribute('class', 'fig__svg')
+    svg.setAttribute('role', 'img')
+    const controles = document.createElement('div')
+    controles.className = 'fig__controles'
+    el.append(svg, controles, leitura)
+    const CORES = ['#a9bdf5', OURO, '#a8e3c5', '#f0a3a3', '#c8b6ff']
+    const txt = (x, y, t, cor, tam = 16, anc = 'middle', peso = 400) => `<text x="${x}" y="${y}" text-anchor="${anc}" fill="${cor}" font-size="${tam}" font-weight="${peso}" style="font-family:var(--mono)">${t}</text>`
+
+    if (s.modo === 'barras') {
+      // Contagens que viram probabilidades: cada barra é uma contagem; embaixo, a fração do total.
+      svg.setAttribute('aria-label', 'Barras com as contagens e as probabilidades de cada letra')
+      const c = [...s.contagens]
+      const desenha = () => {
+        const total = c.reduce((a, b) => a + b, 0)
+        const max = Math.max(s.max || 10, ...c)
+        const n = c.length, larg = Math.min(110, (W - 120) / n - 30), passo = (W - 120) / n
+        const p = [`<line x1="80" x2="${W - 40}" y1="250" y2="250" stroke="${EIXO}" stroke-width="1.5"/>`]
+        c.forEach((v, i) => {
+          const cx = 80 + passo * (i + 0.5), h = (v / max) * 190
+          p.push(`<rect x="${cx - larg / 2}" y="${250 - h}" width="${larg}" height="${h}" rx="6" fill="${CORES[i % CORES.length]}"/>`)
+          p.push(txt(cx, 240 - h, v, '#fff', 18, 'middle', 500))
+          p.push(txt(cx, 278, s.rotulos[i], CURVA, 20, 'middle', 500))
+          p.push(txt(cx, 312, total ? fmt(v / total) : '–', OURO, 16))
+        })
+        p.push(txt(64, 278, 'letra', EIXO, 13, 'end'), txt(64, 312, 'prob.', EIXO, 13, 'end'))
+        svg.innerHTML = p.join('')
+        leitura.textContent = total ? `Total ${total}. As probabilidades somam ${fmt(c.reduce((a, v) => a + v / total, 0))}.` : 'Todas as contagens são zero.'
+      }
+      if (s.mexer) s.rotulos.forEach((r, i) => controles.append(controle(`Contagem de ${r}`, 0, s.max || 10, 1, c[i], (v) => { c[i] = v; desenha() })))
+      desenha()
+    } else {
+      // O sorteio: a faixa de 0 a 1 é dividida pelas probabilidades; o número sorteado cai num pedaço.
+      svg.setAttribute('aria-label', 'Faixa de 0 a 1 dividida pelas probabilidades de cada letra')
+      let u = s.inicial
+      const desenha = () => {
+        const x0 = 40, x1 = W - 40, px = (t) => x0 + (x1 - x0) * t
+        const p = [], nomes = []
+        let acc = 0, sai = s.rotulos[s.rotulos.length - 1]
+        s.probs.forEach((pr, i) => {
+          const a = acc, b = acc + pr
+          if (u >= a && u < b) sai = s.rotulos[i]
+          p.push(`<rect x="${px(a)}" y="120" width="${px(b) - px(a)}" height="80" fill="${CORES[i % CORES.length]}" opacity="${sai === s.rotulos[i] ? 1 : 0.45}" stroke="#071131" stroke-width="2"/>`)
+          nomes.push([(px(a) + px(b)) / 2, s.rotulos[i]])
+          p.push(txt(px(a), 228, fmt(a), EIXO, 13))
+          acc = b
+        })
+        p.push(txt(px(1), 228, '1', EIXO, 13))
+        p.push(`<path d="M${px(u)} 70 L${px(u)} 210" stroke="#fff" stroke-width="2.5"/><circle cx="${px(u)}" cy="66" r="7" fill="#fff"/>`)
+        p.push(txt(px(u), 50, `sorteado: ${fmt(u)}`, '#fff', 15))
+        for (const [x, r] of nomes) p.push(`<circle cx="${x}" cy="161" r="17" fill="#071131" opacity=".85"/>`, txt(x, 168, r, '#fff', 20, 'middle', 600))
+        svg.innerHTML = p.join('')
+        leitura.textContent = `O número ${fmt(u)} cai no pedaço de "${sai}": sai a letra ${sai}.`
+      }
+      controles.append(controle('Número sorteado, entre 0 e 1', 0, 0.99, 0.01, u, (v) => { u = v; desenha() }))
+      desenha()
+    }
+    return
+  }
+
   if (s.modo === 'maquina') {
     const caixa = document.createElement('div')
     caixa.className = 'fig__maquina'

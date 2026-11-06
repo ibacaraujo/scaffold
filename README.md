@@ -4,6 +4,6 @@ A matemática e a programação para compreender as aulas de [Neural Networks: Z
 
 O Scaffold não refaz as aulas nem usa os exemplos delas: prepara a pessoa para compreender os conceitos. Não é afiliado ao curso.
 
-Site estático, sem servidor: a matemática tem gráficos que se mexem e respostas conferidas na hora; a programação roda em Python no navegador (Pyodide). O progresso fica no aparelho. O conteúdo das lições está em `licoes.js` (inclusive os exercícios de depois da aula); as perguntas de pesquisa, com papers do alphaXiv, estão em `pesquisa.js`; a trilha (cada capítulo do Scaffold antes da aula correspondente do curso) está em `trilha.js`.
+Site estático, sem servidor: a matemática tem gráficos que se mexem e respostas conferidas na hora; a programação roda em Python no navegador (Pyodide). O progresso fica no aparelho. O conteúdo das lições está em `licoes.js` (Capítulo 1, inclusive os exercícios de depois da aula) e `capitulo2.js` (Capítulo 2); as perguntas de pesquisa, com papers do alphaXiv, estão em `pesquisa.js`; a trilha (cada capítulo do Scaffold antes da aula correspondente do curso) está em `trilha.js`.
 
 Para rodar localmente: `python3 -m http.server` nesta pasta.

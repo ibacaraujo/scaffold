@@ -1,5 +1,5 @@
 // A trilha: cada capítulo do Scaffold prepara uma aula de Neural Networks: Zero to Hero.
-// O capítulo vem antes; a aula vem depois. O Capítulo 1 tem lições prontas (em licoes.js);
+// O capítulo vem antes; a aula vem depois. Os capítulos prontos têm lições (licoes.js e capitulo2.js);
 // os outros mostram o que vão cobrir.
 
 export const CURSO = 'https://karpathy.ai/zero-to-hero.html'
@@ -19,7 +19,8 @@ export const TRILHA = [
   },
   {
     n: 2,
-    titulo: 'Contar, probabilidade e tensores',
+    pronto: true,
+    titulo: 'Contar, probabilidade e tabelas',
     matematica: 'Contar e dividir, probabilidade, distribuição, amostrar, logaritmo, a perda como log da probabilidade',
     programacao: 'Textos e caracteres, dicionários, tensores do PyTorch, broadcasting',
     aula: {
