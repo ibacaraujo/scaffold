@@ -419,8 +419,13 @@ function cartaoDepois(cap) {
     <article class="depois">
       <p class="cap__n">Depois da aula ${cap.n}</p>
       <h3 class="cap__t">Exercícios</h3>
-      <p class="depois__resumo">${dep.length} exercícios simples para praticar o que a aula mostrou.</p>
-      <ol class="depois__lista">${dep.map((x) => `<li><a href="#${x.id}/0"><span class="marca${feito([x]) ? ' marca--feita' : ''}" aria-hidden="true"></span>${x.titulo}</a></li>`).join('')}</ol>
+      <p class="depois__resumo">${dep.length} exercícios simples, na ordem da aula. O último junta tudo.</p>
+      <div class="depois__blocos">${parteDepois(capN(cap.n)).modulos.map((m) => `
+        <div class="depois__bloco">
+          <h4>${m.titulo}</h4>
+          <ol class="depois__lista" start="${dep.indexOf(m.licoes[0]) + 1}">${m.licoes.map((x) => `<li><a href="#${x.id}/0"><span class="marca${feito([x]) ? ' marca--feita' : ''}" aria-hidden="true"></span>${x.titulo}</a></li>`).join('')}</ol>
+        </div>`).join('')}
+      </div>
       ${barrinha(c, 'exercícios')}
       <div class="cap__acoes"><a class="botao" href="#${l.id}/${i}">${feito(dep) ? 'Rever' : c.feitos ? 'Continuar' : 'Fazer os exercícios'}</a></div>
     </article>`
