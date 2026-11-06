@@ -39,6 +39,39 @@ function base(xr, yr, f) {
   return { p, px, py }
 }
 
+
+// O grafo da conta s = x·y, t = s + z, L = t·w (exercício depois da aula). Cada nó mostra o valor e o
+// gradiente; os nós da pergunta aparecem com "?" em dourado.
+const GRAFO = {
+  valor: { x: 3, y: -2, z: 4, w: 5, s: -6, t: -2, L: -10 },
+  pos: { x: [52, 70], y: [52, 180], s: [232, 125], z: [232, 262], t: [412, 193], w: [412, 300], L: [590, 246] },
+  ops: [['×', 142, 125, ['x', 'y'], 's'], ['+', 322, 193, ['s', 'z'], 't'], ['×', 502, 246, ['t', 'w'], 'L']],
+}
+function desenharGrafo(s) {
+  const { valor, pos, ops } = GRAFO
+  const pergunta = (n) => s.perguntas.includes(n)
+  const mostraValor = (n) => s.valores === true || (Array.isArray(s.valores) && s.valores.includes(n))
+  const p = []
+  const nw = 84, nh = 70
+  for (const [sinal, ox, oy, de, para] of ops) {
+    for (const d of de) p.push(`<path d="M${pos[d][0] + nw / 2} ${pos[d][1]} L${ox - 17} ${oy}" stroke="${EIXO}" stroke-width="1.5" fill="none"/>`)
+    p.push(`<path d="M${ox + 17} ${oy} L${pos[para][0] - nw / 2} ${pos[para][1]}" stroke="${EIXO}" stroke-width="1.5" fill="none"/>`)
+    p.push(`<circle cx="${ox}" cy="${oy}" r="17" fill="#24376c"/><text x="${ox}" y="${oy + 6}" text-anchor="middle" fill="${CURVA}" font-size="18" style="font-family:var(--mono)">${sinal}</text>`)
+  }
+  for (const [n, [cx, cy]] of Object.entries(pos)) {
+    const q = pergunta(n)
+    const v = mostraValor(n) ? fmt(valor[n]) : '?'
+    const temG = n in s.grads
+    const g = temG ? fmt(s.grads[n]) : (q && s.valores === true ? '?' : '')
+    const borda = q ? OURO : '#24376c'
+    p.push(`<rect x="${cx - nw / 2}" y="${cy - nh / 2}" width="${nw}" height="${nh}" rx="10" fill="#071131" stroke="${borda}" stroke-width="${q ? 2.5 : 1.5}"/>`)
+    p.push(`<text x="${cx - nw / 2 + 10}" y="${cy - 14}" fill="${EIXO}" font-size="14" style="font-family:var(--mono)">${n}</text>`)
+    p.push(`<text x="${cx + nw / 2 - 10}" y="${cy - 12}" text-anchor="end" fill="#fff" font-size="20" font-weight="500" style="font-family:var(--mono)">${v}</text>`)
+    if (g !== '') p.push(`<text x="${cx - nw / 2 + 10}" y="${cy + 24}" fill="${OURO}" font-size="14" style="font-family:var(--mono)">grad ${g}</text>`)
+  }
+  return p.join('')
+}
+
 const ponto = (x, y, cor = OURO, r = 8) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${cor}" stroke="#071131" stroke-width="2.5"/>`
 
 function controle(rotulo, min, max, passo, valor, aoMudar) {
@@ -62,6 +95,18 @@ export function montarFigura(el, s) {
   const leitura = document.createElement('p')
   leitura.className = 'fig__leitura'
   leitura.setAttribute('aria-live', 'polite')
+
+  if (s.modo === 'grafo') {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`)
+    svg.setAttribute('class', 'fig__svg')
+    svg.setAttribute('role', 'img')
+    svg.setAttribute('aria-label', 'Grafo da conta: s = x vezes y, t = s mais z, L = t vezes w')
+    svg.innerHTML = desenharGrafo(s)
+    leitura.textContent = s.valores === true ? 'Valor em branco, gradiente em dourado.' : 'Os valores de entrada já estão no grafo.'
+    el.append(svg, leitura)
+    return
+  }
 
   if (s.modo === 'maquina') {
     const caixa = document.createElement('div')
