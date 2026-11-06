@@ -1,7 +1,6 @@
 import { CAPITULOS } from './licoes.js'
 import { montarFigura } from './figuras.js'
 import { TRILHA, CURSO } from './trilha.js'
-import { PESQUISA } from './pesquisa.js'
 
 const $ = (s) => document.querySelector(s)
 const licoesDa = (parte) => parte.modulos.flatMap((m) => m.licoes)
@@ -29,11 +28,12 @@ const passo = () => licao.passos[passoI]
 const ehCodigo = (p) => p.inicio !== undefined
 
 // Telas fora da lição: #inicio e #trilha. Sem nada no endereço, abre o início.
-let tela = 'inicio', pesquisaN = 1
+let tela = 'inicio'
 function lerHash() {
   const h = location.hash.slice(1)
   if (h === '' || h === 'inicio' || h === 'trilha') { tela = h || 'inicio'; return true }
-  if (h.split('/')[0] === 'pesquisa') { tela = 'pesquisa'; pesquisaN = PESQUISA[Number(h.split('/')[1])] ? Number(h.split('/')[1]) : 1; return true }
+  // Endereços antigos da tela de pesquisa, que saiu: abrem a trilha.
+  if (h.split('/')[0] === 'pesquisa') { tela = 'trilha'; return true }
   tela = 'licao'
   const [id, i] = h.split('/')
   const l = LICOES.find((x) => x.id === id)
@@ -249,9 +249,8 @@ function mostrarResultado(box, tipo, msg, tecnico) {
     n.innerHTML = `Você chegou ao fim do Capítulo ${cap.n}. Agora é a vez da <a href="${cap.aula}" target="_blank" rel="noopener">aula ${cap.n} do Karpathy</a>. ${depois}`
     if (s) botao(vaiParaDepois ? 'Já assisti: ir para os exercícios' : `Já assisti: ir para o Capítulo ${capSeg.n}`, () => { salvo.aulas[cap.n] = true; guardar(); ir(...s) })
   } else if (noDepois && fimDaLicao && (!s || capSeg !== cap)) {
-    add('p', 'Você terminou os exercícios. Que tal uma pergunta de pesquisa?', 'resultado__nota')
+    add('p', `Você chegou ao fim dos exercícios da aula ${cap.n}.${s ? '' : ' O próximo capítulo ainda está sendo preparado.'}`, 'resultado__nota')
     if (s) botao(`Ir para o Capítulo ${capSeg.n}`, () => ir(...s))
-    if (PESQUISA[cap.n]) { const b = add('a', 'Ver as perguntas de pesquisa', s ? 'botao botao--linha' : 'botao'); b.href = `#pesquisa/${cap.n}`; b.style.marginLeft = s ? '10px' : '' }
   } else if (s) {
     const b = add('button', fimDaLicao ? `Próxima lição: ${s[0].titulo}` : 'Próximo passo', 'botao')
     b.id = 'avancar'
@@ -409,26 +408,23 @@ function cartaoAula(cap, comCheck = true) {
     </article>`
 }
 function cartaoDepois(cap) {
-  const dep = licoesDepois(capN(cap.n)), depoisFeito = feito(dep)
-  const pq = PESQUISA[cap.n]
+  // Os exercícios de depois da aula, agrupados pelos módulos, com cada lição marcada quando feita.
+  const parte = parteDepois(capN(cap.n)), dep = licoesDa(parte), c = contar(dep)
   const [l, i] = primeiroPorFazer(dep)
   return `
     <article class="depois">
       <p class="cap__n">Depois da aula ${cap.n}</p>
-      <h3 class="cap__t">Exercícios e perguntas de pesquisa</h3>
-      <div class="depois__par">
-        <div class="depois__lado">
-          <h4>Exercícios</h4>
-          <p>${dep.map((x) => x.titulo).join(', ')}.</p>
-          ${barrinha(contar(dep))}
-          <a class="botao" href="#${l.id}/${i}">${depoisFeito ? 'Rever' : contar(dep).feitos ? 'Continuar' : 'Fazer os exercícios'}</a>
-        </div>
-        <div class="depois__lado">
-          <h4>Para pesquisar</h4>
-          <p>${pq.perguntas.length} perguntas que ainda são estudadas, cada uma com um experimento que cabe no seu código e papers para começar.</p>
-          <a class="botao botao--linha" href="#pesquisa/${cap.n}">Ver as perguntas</a>
-        </div>
+      <h3 class="cap__t">Exercícios</h3>
+      <p class="depois__resumo">${dep.length} lições e ${c.total} exercícios, para fazer depois de assistir à aula.</p>
+      <div class="depois__mods">
+        ${parte.modulos.map((m) => `
+          <div class="depois__mod">
+            <h4>${m.titulo}</h4>
+            <ul>${m.licoes.map((x) => `<li><a href="#${x.id}/0"><span class="marca${feito([x]) ? ' marca--feita' : ''}" aria-hidden="true"></span>${x.titulo}</a></li>`).join('')}</ul>
+          </div>`).join('')}
       </div>
+      ${barrinha(c)}
+      <div class="cap__acoes"><a class="botao" href="#${l.id}/${i}">${feito(dep) ? 'Rever' : c.feitos ? 'Continuar' : 'Fazer os exercícios'}</a></div>
     </article>`
 }
 function desenharTrilha() {
@@ -442,31 +438,11 @@ function desenharTrilha() {
       </li>
       <li class="linha__item linha__item--aula${estado}${salvo.aulas[cap.n] ? ' linha__item--feito' : ''}">
         <span class="linha__no" aria-hidden="true">${salvo.aulas[cap.n] ? '✓' : '<svg width="12" height="14" viewBox="0 0 12 14"><path d="M1 0l11 7-11 7z" fill="currentColor"/></svg>'}</span>${cartaoAula(cap)}
-      </li>${cap.pronto && PESQUISA[cap.n] && licoesDepois(capN(cap.n)).length ? `
+      </li>${cap.pronto && licoesDepois(capN(cap.n)).length ? `
       <li class="linha__item linha__item--depois${depFeito(cap) ? ' linha__item--feito' : ''}">
         <span class="linha__no" aria-hidden="true">${depFeito(cap) ? '✓' : '<svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 13l2.5-.5L13 5l-2-2-7.5 7.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>'}</span>${cartaoDepois(cap)}
       </li>` : ''}`
   }).join('')
-}
-function desenharPesquisa() {
-  const pq = PESQUISA[pesquisaN]
-  $('#pesquisa-intro').textContent = pq.intro
-  $('#pesquisa-aula').textContent = `Depois da aula ${pesquisaN} · ${pq.aula}`
-  $('#perguntas').innerHTML = pq.perguntas.map((q, n) => `
-    <li class="pergunta${q.projeto ? ' pergunta--projeto' : ''}">
-      <div class="pergunta__topo"><span class="pergunta__n">${n + 1}</span><span class="selo">${q.selo}</span>${q.projeto ? '<span class="selo selo--ouro">Projeto sugerido</span>' : ''}</div>
-      <h2 class="pergunta__t">${q.titulo}</h2>
-      <p class="pergunta__q">${q.pergunta}</p>
-      <dl class="pergunta__dl">
-        <div><dt>O que a aula mostrou</dt><dd>${q.daAula}</dd></div>
-        <div><dt>O que se sabe</dt><dd>${q.contexto}</dd></div>
-        <div class="pergunta__exp"><dt>Experimento no seu código</dt><dd>${q.experimento}</dd></div>
-      </dl>
-      <div class="pergunta__ler">
-        <h3>Para começar a ler</h3>
-        <ul>${q.papers.map((p) => `<li><a href="https://www.alphaxiv.org/abs/${p.id}" target="_blank" rel="noopener">${p.t}</a> <span>${p.ano} · arXiv ${p.id}</span></li>`).join('')}</ul>
-      </div>
-    </li>`).join('')
 }
 function desenharInicio() {
   const o = onde()
@@ -476,23 +452,21 @@ function desenharInicio() {
   $('#capa-onde').hidden = !o.comecou || o.tipo === 'fim'
   $('#capa-onde').textContent = `Você parou em: Capítulo ${o.cap.n}, ${parteDe(o.l).titulo}, ${o.l.titulo}.`
   const t = TRILHA.find((x) => x.n === o.cap.n)
-  $('#agora').innerHTML = cartaoCapitulo(t) + cartaoAula(t, false) + (licoesDepois(o.cap).length && PESQUISA[t.n] ? `<div class="agora__largo">${cartaoDepois(t)}</div>` : '')
+  $('#agora').innerHTML = cartaoCapitulo(t) + cartaoAula(t, false) + (licoesDepois(o.cap).length ? `<div class="agora__largo">${cartaoDepois(t)}</div>` : '')
 }
 function desenharTela() {
   const fora = tela !== 'licao'
   $('.app').classList.toggle('app--fora', fora)
   $('#tela-inicio').hidden = tela !== 'inicio'
   $('#tela-trilha').hidden = tela !== 'trilha'
-  $('#tela-pesquisa').hidden = tela !== 'pesquisa'
   $('#tela-licao').hidden = fora
-  $('#link-trilha').classList.toggle('topo__trilha--atual', tela === 'trilha' || tela === 'pesquisa')
+  $('#link-trilha').classList.toggle('topo__trilha--atual', tela === 'trilha')
   const o = onde()
   $('#topo-seguir').textContent = o.comecou ? 'Continuar' : 'Começar'
   $('#topo-seguir').href = o.href
   abrirLista(false)
   if (tela === 'inicio') { document.title = 'Scaffold'; desenharInicio() }
   else if (tela === 'trilha') { document.title = 'A trilha · Scaffold'; desenharTrilha() }
-  else if (tela === 'pesquisa') { document.title = 'Para pesquisar · Scaffold'; desenharPesquisa() }
   else { desenharPasso(); return }
   desenharLista()
   window.scrollTo(0, 0)

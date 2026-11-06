@@ -295,12 +295,6 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
 /* depois da aula */
 .depois { padding: 20px 22px; background: #fff; border: 1.5px solid #f5d78e; border-radius: 14px; font-size: 16px; }
 .depois .cap__n { color: #8a6a12; }
-.depois__par { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px 28px; }
-.depois__lado { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
-.depois__lado h4 { margin: 0; font-size: 13px; font-weight: 600; }
-.depois__lado p { margin: 0; color: var(--fg-2); font-size: 15px; line-height: 1.5; }
-.depois__lado .barrinha { align-self: stretch; }
-.depois__lado .botao { margin-top: auto; }
 .botao--linha { background: #fff; color: var(--sky); border: 1.5px solid var(--sky); padding: 7.5px 18.5px; }
 .botao--linha:hover { background: var(--bg-2); color: var(--sky); }
 .linha__item--depois { margin-top: -22px; margin-bottom: 40px; }
@@ -308,34 +302,17 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
 .agora__largo { grid-column: 1 / -1; }
 .aba__mais { }
 
-/* para pesquisar */
-.pesquisa { max-width: 920px; }
-.pesquisa .capa__sobre a { color: var(--sky); }
-.perguntas { list-style: none; margin: 36px 0 0; padding: 0; display: grid; gap: 20px; }
-.pergunta { padding: clamp(20px, 2.4vw, 32px); background: #fff; border: 1px solid var(--rule); border-radius: 16px; font-size: 16px; }
-.pergunta--projeto { border: 1.5px solid #f5d78e; box-shadow: 0 0 0 4px #fdf6e1; }
-.pergunta__topo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.pergunta__n { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--night-2); color: #f5d78e; font-size: 14px; font-weight: 600; }
-.selo--ouro { background: #fdf6e1; color: #8a6a12; }
-.pergunta__t { margin: 14px 0 4px; font-size: clamp(22px, 1.8vw, 28px); font-weight: 500; letter-spacing: -.02em; line-height: 1.2; }
-.pergunta__q { margin: 0 0 18px; font-size: 1.08em; color: var(--fg-2); }
-.pergunta__dl { display: grid; gap: 14px; margin: 0; }
-.pergunta__dl dt { font-size: 13px; font-weight: 600; color: var(--sky); }
-.pergunta__dl dd { margin: 3px 0 0; line-height: 1.6; color: var(--fg); }
-.pergunta__exp { padding: 14px 16px; background: var(--night-2); border-radius: 12px; }
-.pergunta__exp dt { color: #f5d78e; }
-.pergunta__exp dd { color: var(--night-fg); }
-.pergunta__ler { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--rule); }
-.pergunta__ler h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; color: var(--mute); }
-.pergunta__ler ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-.pergunta__ler li { line-height: 1.45; }
-.pergunta__ler a { text-underline-offset: 3px; }
-.pergunta__ler span { display: inline-block; font: 400 13px var(--mono); color: var(--mute); }
-.trilha__fim--sem { margin-left: 0; margin-top: 24px; }
+/* exercícios de depois da aula */
+.depois__resumo { margin: -6px 0 16px; color: var(--fg-2); font-size: 15px; }
+.depois__mods { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px 24px; margin-bottom: 16px; }
+.depois__mod h4 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+.depois__mod ul { list-style: none; margin: 0; padding: 0; }
+.depois__mod a { display: flex; align-items: center; gap: 9px; padding: 3px 0; color: var(--fg); text-decoration: none; font-size: 15px; line-height: 1.35; }
+.depois__mod a:hover { color: var(--sky); }
+.depois__mod .marca { width: 10px; height: 10px; }
 
 @media (max-width: 900px) {
   .aba__mais { display: none; }
-  .depois__par { grid-template-columns: 1fr; }
   .linha__item--depois { margin-top: -10px; }
 }
 .lista__nav { margin: 6px 0 0; font-size: 14px; color: var(--mute); }
@@ -421,18 +398,6 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
       </header>
       <ol class="linha" id="linha"></ol>
       <p class="trilha__fim">As aulas estão em inglês, no YouTube. O Scaffold não é afiliado ao curso.</p>
-    </div>
-  </main>
-
-  <main class="tela" id="tela-pesquisa" hidden>
-    <div class="trilha pesquisa">
-      <header class="trilha__topo">
-        <p class="capa__sobre capa__sobre--escuro"><a href="#trilha">A trilha</a> · <span id="pesquisa-aula"></span></p>
-        <h1 class="trilha__t">Para pesquisar</h1>
-        <p class="trilha__p" id="pesquisa-intro"></p>
-      </header>
-      <ol class="perguntas" id="perguntas"></ol>
-      <p class="trilha__fim trilha__fim--sem">Papers encontrados no alphaXiv. Os links abrem a página de cada um, com resumo e discussão.</p>
     </div>
   </main>
 
