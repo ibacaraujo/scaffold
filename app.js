@@ -29,10 +29,11 @@ const passo = () => licao.passos[passoI]
 const ehCodigo = (p) => p.inicio !== undefined
 
 // Telas fora da lição: #inicio e #trilha. Sem nada no endereço, abre o início.
-let tela = 'inicio'
+let tela = 'inicio', pesquisaN = 1
 function lerHash() {
   const h = location.hash.slice(1)
-  if (h === '' || h === 'inicio' || h === 'trilha' || h === 'pesquisa') { tela = h || 'inicio'; return true }
+  if (h === '' || h === 'inicio' || h === 'trilha') { tela = h || 'inicio'; return true }
+  if (h.split('/')[0] === 'pesquisa') { tela = 'pesquisa'; pesquisaN = PESQUISA[Number(h.split('/')[1])] ? Number(h.split('/')[1]) : 1; return true }
   tela = 'licao'
   const [id, i] = h.split('/')
   const l = LICOES.find((x) => x.id === id)
@@ -250,7 +251,7 @@ function mostrarResultado(box, tipo, msg, tecnico) {
   } else if (noDepois && fimDaLicao && (!s || capSeg !== cap)) {
     add('p', 'Você terminou os exercícios. Que tal uma pergunta de pesquisa?', 'resultado__nota')
     if (s) botao(`Ir para o Capítulo ${capSeg.n}`, () => ir(...s))
-    if (PESQUISA[cap.n]) { const b = add('a', 'Ver as perguntas de pesquisa', s ? 'botao botao--linha' : 'botao'); b.href = '#pesquisa'; b.style.marginLeft = s ? '10px' : '' }
+    if (PESQUISA[cap.n]) { const b = add('a', 'Ver as perguntas de pesquisa', s ? 'botao botao--linha' : 'botao'); b.href = `#pesquisa/${cap.n}`; b.style.marginLeft = s ? '10px' : '' }
   } else if (s) {
     const b = add('button', fimDaLicao ? `Próxima lição: ${s[0].titulo}` : 'Próximo passo', 'botao')
     b.id = 'avancar'
@@ -425,7 +426,7 @@ function cartaoDepois(cap) {
         <div class="depois__lado">
           <h4>Para pesquisar</h4>
           <p>${pq.perguntas.length} perguntas que ainda são estudadas, cada uma com um experimento que cabe no seu código e papers para começar.</p>
-          <a class="botao botao--linha" href="#pesquisa">Ver as perguntas</a>
+          <a class="botao botao--linha" href="#pesquisa/${cap.n}">Ver as perguntas</a>
         </div>
       </div>
     </article>`
@@ -448,9 +449,9 @@ function desenharTrilha() {
   }).join('')
 }
 function desenharPesquisa() {
-  const pq = PESQUISA[1]
+  const pq = PESQUISA[pesquisaN]
   $('#pesquisa-intro').textContent = pq.intro
-  $('#pesquisa-aula').textContent = `Depois da aula 1 · ${pq.aula}`
+  $('#pesquisa-aula').textContent = `Depois da aula ${pesquisaN} · ${pq.aula}`
   $('#perguntas').innerHTML = pq.perguntas.map((q, n) => `
     <li class="pergunta${q.projeto ? ' pergunta--projeto' : ''}">
       <div class="pergunta__topo"><span class="pergunta__n">${n + 1}</span><span class="selo">${q.selo}</span>${q.projeto ? '<span class="selo selo--ouro">Projeto sugerido</span>' : ''}</div>

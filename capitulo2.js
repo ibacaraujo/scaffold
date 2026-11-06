@@ -550,5 +550,156 @@ if not _np.allclose(P[0], [0, 0.6, 0.3, 0.1]):
         { titulo: 'PyTorch', licoes: [], topicos: 'Tensores, torch.multinomial, gerador com semente, requires_grad' },
       ],
     },
+    {
+      // Depois da aula 2: a pessoa já viu o modelo de pares de letras. Aqui ela olha mais para trás,
+      // separa treino e teste e escolhe a suavização medindo, como se faz numa pesquisa de verdade.
+      id: 'depois',
+      titulo: 'Depois da aula',
+      modulos: [
+        {
+          titulo: 'Exercícios da aula 2',
+          licoes: [
+            {
+              id: 'trigramas',
+              titulo: 'Olhar duas letras para trás',
+              porque: 'O modelo da aula olha só uma letra para decidir a próxima. O primeiro exercício proposto por Karpathy é olhar duas. Aqui você conta os trios de letras e descobre o preço de olhar mais longe.',
+              passos: [
+                {
+                  texto: `<p>Um <strong>trio</strong> são duas letras de contexto e a letra seguinte. Para a palavra começar com contexto, marcamos o início com dois pontos: <code>"ana"</code> vira <code>"..ana."</code>.</p>
+<p>Um pedaço de um texto se pega com dois-pontos dentro dos colchetes: <code>marcada[i:i + 3]</code> são as 3 letras a partir da posição <code>i</code>.</p>`,
+                  tarefa: 'Complete a linha que conta cada trio.',
+                  inicio: `palavras = ["ana", "ano"]\ntrios = {}\n\nfor palavra in palavras:\n    marcada = ".." + palavra + "."\n    for i in range(len(marcada) - 2):\n        trio = marcada[i:i + 3]\n        # conte o trio aqui\n\nprint(trios)\n`,
+                  dica: 'Igual à contagem de pares: <code>trios[trio] = trios.get(trio, 0) + 1</code>.',
+                  solucao: `palavras = ["ana", "ano"]\ntrios = {}\n\nfor palavra in palavras:\n    marcada = ".." + palavra + "."\n    for i in range(len(marcada) - 2):\n        trio = marcada[i:i + 3]\n        trios[trio] = trios.get(trio, 0) + 1\n\nprint(trios)\n`,
+                  checagem: `
+tem('trios')
+if trios != {'..a': 2, '.an': 2, 'ana': 1, 'na.': 1, 'ano': 1, 'no.': 1}:
+    falha('Os trios deviam ser: ..a 2, .an 2, ana 1, na. 1, ano 1, no. 1.')
+`,
+                },
+                {
+                  texto: `<p>Com 27 símbolos (as 26 letras e o ponto), existem 27 × 27 = 729 contextos de duas letras. Quantos deles aparecem de verdade numa lista de 50 palavras?</p>
+<p><code>.split()</code> corta um texto nos espaços e devolve uma lista. <code>set</code> guarda cada coisa uma vez só, sem repetir, e <code>.add</code> coloca um item nele.</p>`,
+                  tarefa: 'Dentro do <code>for</code>, guarde em <code>contextos</code> as duas letras de contexto de cada trio. Depois mostre quantos contextos diferentes apareceram.',
+                  inicio: `palavras = "casa bola sapo gato pato lago mala rato vaca faca dado copo mesa rosa lua sol mar rio pao ovo uva noite tarde manha cama sala porta janela livro papel caneta escola amigo banana laranja tomate batata cenoura cebola alho pera melao abacaxi morango limao caju coco milho arroz feijao".split()\n\ncontextos = set()\nfor palavra in palavras:\n    marcada = ".." + palavra + "."\n    for i in range(len(marcada) - 2):\n        pass\n\nprint(len(contextos), "de", 27 * 27)\n`,
+                  dica: 'Troque <code>pass</code> por <code>contextos.add(marcada[i:i + 2])</code>.',
+                  solucao: `palavras = "casa bola sapo gato pato lago mala rato vaca faca dado copo mesa rosa lua sol mar rio pao ovo uva noite tarde manha cama sala porta janela livro papel caneta escola amigo banana laranja tomate batata cenoura cebola alho pera melao abacaxi morango limao caju coco milho arroz feijao".split()\n\ncontextos = set()\nfor palavra in palavras:\n    marcada = ".." + palavra + "."\n    for i in range(len(marcada) - 2):\n        contextos.add(marcada[i:i + 2])\n\nprint(len(contextos), "de", 27 * 27)\n`,
+                  checagem: `
+tem('contextos')
+if len(contextos) != 109:
+    falha('Deviam ser 109 contextos diferentes. Guarde as duas letras de contexto: marcada[i:i + 2].')
+`,
+                  certo: 'Só 109 dos 729 contextos apareceram. Em mais de 85% deles, o modelo de trios não tem nenhuma contagem.',
+                },
+                {
+                  texto: `<p>Com pares, cada contexto é uma letra só, e quase todas aparecem nos dados. Com trios, a maioria dos contextos nunca apareceu.</p>`,
+                  tarefa: 'Com poucos dados, o que acontece quando o modelo olha mais letras para trás?',
+                  opcoes: [
+                    { t: 'Fica sempre melhor, porque usa mais informação.', por: 'Mais informação ajuda só quando há dados para estimar cada contexto. Aqui, a maioria nunca apareceu.' },
+                    { t: 'Muitos contextos nunca aparecem, e o modelo depende mais da suavização ou de mais dados.', certa: true },
+                    { t: 'Nada muda: pares e trios dão a mesma perda.', por: 'Os dois modelos dão probabilidades diferentes, e por isso perdas diferentes.' },
+                  ],
+                  erro: 'Pense nos 620 contextos sem nenhuma contagem.',
+                  dica: 'Um contexto sem contagem tem probabilidade zero para tudo, até ser suavizado.',
+                  solucao: 'Muitos contextos ficam sem contagem. Esse é o problema que as redes neurais das próximas aulas resolvem: elas compartilham o que aprendem entre contextos parecidos.',
+                },
+              ],
+            },
+            {
+              id: 'treino-teste',
+              titulo: 'Separar treino e teste',
+              porque: 'Na aula, a perda é medida nas mesmas palavras que foram contadas. Karpathy propõe separar uma parte das palavras para testar o modelo. É a primeira regra de qualquer experimento em aprendizado de máquina.',
+              passos: [
+                {
+                  texto: `<p>Um modelo de contagem conhece bem as palavras que contou. A pergunta que interessa é outra: ele funciona para palavras <strong>que nunca viu</strong>?</p>`,
+                  tarefa: 'Por que medir a perda em palavras que ficaram de fora da contagem?',
+                  opcoes: [
+                    { t: 'Porque assim a perda fica menor.', por: 'Em palavras novas, a perda costuma ficar maior, não menor.' },
+                    { t: 'Porque o modelo pode ter só decorado as palavras que contou. Palavras novas mostram se ele generaliza.', certa: true },
+                    { t: 'Porque contar todas as palavras demora demais.', por: 'Contar é rápido. O motivo é medir de forma honesta.' },
+                  ],
+                  erro: 'Pense na diferença entre decorar e aprender.',
+                  dica: 'Uma prova com as mesmas questões do exercício mede o quê?',
+                  solucao: 'O teste com palavras novas mostra se o modelo generaliza, e não só se decorou.',
+                },
+                {
+                  texto: `<p>Primeiro, embaralhar, para a separação não depender da ordem da lista. <code>random.shuffle</code> embaralha a lista no lugar, e a semente fixa o resultado.</p>
+<p>Depois, cortar: <code>palavras[:40]</code> são as 40 primeiras, e <code>palavras[40:]</code> é o resto.</p>`,
+                  tarefa: 'Separe as 40 primeiras palavras em <code>treino</code> e as outras em <code>teste</code>.',
+                  inicio: `import random\n\npalavras = "casa bola sapo gato pato lago mala rato vaca faca dado copo mesa rosa lua sol mar rio pao ovo uva noite tarde manha cama sala porta janela livro papel caneta escola amigo banana laranja tomate batata cenoura cebola alho pera melao abacaxi morango limao caju coco milho arroz feijao".split()\n\nrandom.seed(1)\nrandom.shuffle(palavras)\n\ntreino = palavras\nteste = []\n\nprint(len(treino), len(teste))\nprint(teste)\n`,
+                  dica: '<code>treino = palavras[:40]</code> e <code>teste = palavras[40:]</code>.',
+                  solucao: `import random\n\npalavras = "casa bola sapo gato pato lago mala rato vaca faca dado copo mesa rosa lua sol mar rio pao ovo uva noite tarde manha cama sala porta janela livro papel caneta escola amigo banana laranja tomate batata cenoura cebola alho pera melao abacaxi morango limao caju coco milho arroz feijao".split()\n\nrandom.seed(1)\nrandom.shuffle(palavras)\n\ntreino = palavras[:40]\nteste = palavras[40:]\n\nprint(len(treino), len(teste))\nprint(teste)\n`,
+                  checagem: `
+tem('treino')
+tem('teste')
+if len(treino) != 40 or len(teste) != 10:
+    falha('treino devia ter 40 palavras e teste, 10.')
+if set(treino) & set(teste):
+    falha('Uma palavra não pode estar no treino e no teste ao mesmo tempo.')
+if teste != ['cama', 'melao', 'caneta', 'livro', 'escola', 'rato', 'mar', 'pato', 'batata', 'vaca']:
+    falha('Use a semente 1 e corte depois de embaralhar.')
+`,
+                },
+                {
+                  texto: `<p>O código já traz duas funções. <code>contar(palavras, k)</code> monta a tabela de probabilidades dos pares, somando <code>k</code> a todas as contagens. <code>perda(P, palavras)</code> é a média de −log das probabilidades dos pares dessas palavras.</p>
+<p>Execute com <code>k = 0</code>, sem suavizar: no treino a perda é um número comum, mas no teste dá <code>inf</code>, infinito. Alguma palavra do teste tem um par que nunca apareceu no treino.</p>`,
+                  tarefa: 'Mude <code>k</code> para 1 e compare a perda no treino com a perda no teste.',
+                  inicio: `import random\nimport numpy as np\n\npalavras = "casa bola sapo gato pato lago mala rato vaca faca dado copo mesa rosa lua sol mar rio pao ovo uva noite tarde manha cama sala porta janela livro papel caneta escola amigo banana laranja tomate batata cenoura cebola alho pera melao abacaxi morango limao caju coco milho arroz feijao".split()\nrandom.seed(1)\nrandom.shuffle(palavras)\ntreino, teste = palavras[:40], palavras[40:]\n\nletras = ".abcdefghijklmnopqrstuvwxyz"\nposicao = {letra: i for i, letra in enumerate(letras)}\n\ndef pares(palavra):\n    m = "." + palavra + "."\n    return [(posicao[m[i]], posicao[m[i + 1]]) for i in range(len(m) - 1)]\n\ndef contar(palavras, k):\n    N = np.full((27, 27), float(k))\n    for p in palavras:\n        for a, b in pares(p):\n            N[a, b] += 1\n    return N / N.sum(axis=1, keepdims=True)\n\ndef perda(P, palavras):\n    erros = [-np.log(P[a, b]) for p in palavras for a, b in pares(p)]\n    return float(np.mean(erros))\n\nk = 0\nP = contar(treino, k)\nperda_treino = perda(P, treino)\nperda_teste = perda(P, teste)\nprint("treino:", perda_treino)\nprint("teste:", perda_teste)\n`,
+                  dica: 'Só uma linha muda: <code>k = 1</code>.',
+                  solucao: `import random\nimport numpy as np\n\npalavras = "casa bola sapo gato pato lago mala rato vaca faca dado copo mesa rosa lua sol mar rio pao ovo uva noite tarde manha cama sala porta janela livro papel caneta escola amigo banana laranja tomate batata cenoura cebola alho pera melao abacaxi morango limao caju coco milho arroz feijao".split()\nrandom.seed(1)\nrandom.shuffle(palavras)\ntreino, teste = palavras[:40], palavras[40:]\n\nletras = ".abcdefghijklmnopqrstuvwxyz"\nposicao = {letra: i for i, letra in enumerate(letras)}\n\ndef pares(palavra):\n    m = "." + palavra + "."\n    return [(posicao[m[i]], posicao[m[i + 1]]) for i in range(len(m) - 1)]\n\ndef contar(palavras, k):\n    N = np.full((27, 27), float(k))\n    for p in palavras:\n        for a, b in pares(p):\n            N[a, b] += 1\n    return N / N.sum(axis=1, keepdims=True)\n\ndef perda(P, palavras):\n    erros = [-np.log(P[a, b]) for p in palavras for a, b in pares(p)]\n    return float(np.mean(erros))\n\nk = 1\nP = contar(treino, k)\nperda_treino = perda(P, treino)\nperda_teste = perda(P, teste)\nprint("treino:", perda_treino)\nprint("teste:", perda_teste)\n`,
+                  checagem: `
+import math
+tem('perda_teste')
+if not math.isfinite(perda_teste):
+    falha('A perda no teste ainda é infinita. Suavize com k = 1.')
+if k != 1:
+    falha('Use k = 1 nesta etapa.')
+if not perto(perda_teste, perda(contar(treino, 1), teste)):
+    falha('Calcule perda_teste com as palavras do teste.')
+`,
+                  certo: 'Com k = 1, a perda no teste fica finita: perto de 2,49, contra 2,43 no treino. Agora, a perda no teste é a nota honesta do modelo.',
+                },
+              ],
+            },
+            {
+              id: 'suavizacao',
+              titulo: 'Escolher a suavização',
+              porque: 'A aula soma 1 a todas as contagens, mas por que 1? Karpathy propõe medir qual suavização funciona melhor. Escolher um número assim, medindo, é o que se chama ajustar um hiperparâmetro.',
+              passos: [
+                {
+                  texto: `<p>Vamos tentar vários valores de <code>k</code>, de 0,001 até 100, e medir a perda em palavras que ficaram de fora. O gráfico usa escala logarítmica no eixo de <code>k</code>.</p>
+<p>Com <code>k</code> muito pequeno, pares nunca vistos ficam quase impossíveis. Com <code>k</code> muito grande, todas as letras ficam quase igualmente prováveis, e o modelo esquece o que contou.</p>`,
+                  tarefa: 'Execute e olhe o gráfico. Depois, faça <code>melhor_k</code> ser o <code>k</code> com a menor perda.',
+                  inicio: `import random\nimport numpy as np\nimport matplotlib.pyplot as plt\n\npalavras = "casa bola sapo gato pato lago mala rato vaca faca dado copo mesa rosa lua sol mar rio pao ovo uva noite tarde manha cama sala porta janela livro papel caneta escola amigo banana laranja tomate batata cenoura cebola alho pera melao abacaxi morango limao caju coco milho arroz feijao".split()\nrandom.seed(1)\nrandom.shuffle(palavras)\ntreino, teste = palavras[:40], palavras[40:]\n\nletras = ".abcdefghijklmnopqrstuvwxyz"\nposicao = {letra: i for i, letra in enumerate(letras)}\n\ndef pares(palavra):\n    m = "." + palavra + "."\n    return [(posicao[m[i]], posicao[m[i + 1]]) for i in range(len(m) - 1)]\n\ndef contar(palavras, k):\n    N = np.full((27, 27), float(k))\n    for p in palavras:\n        for a, b in pares(p):\n            N[a, b] += 1\n    return N / N.sum(axis=1, keepdims=True)\n\ndef perda(P, palavras):\n    erros = [-np.log(P[a, b]) for p in palavras for a, b in pares(p)]\n    return float(np.mean(erros))\n\nks = [0.001, 0.01, 0.1, 1, 10, 100]\nperdas = []\nfor k in ks:\n    perdas.append(perda(contar(treino, k), teste))\n\nplt.semilogx(ks, perdas, 'o-')\nplt.xlabel('k')\nplt.ylabel('perda nas palavras de fora')\n\nmelhor_k = None\nprint(melhor_k)\n`,
+                  dica: 'Como no exercício do tamanho do passo: <code>ks[perdas.index(min(perdas))]</code>.',
+                  solucao: `import random\nimport numpy as np\nimport matplotlib.pyplot as plt\n\npalavras = "casa bola sapo gato pato lago mala rato vaca faca dado copo mesa rosa lua sol mar rio pao ovo uva noite tarde manha cama sala porta janela livro papel caneta escola amigo banana laranja tomate batata cenoura cebola alho pera melao abacaxi morango limao caju coco milho arroz feijao".split()\nrandom.seed(1)\nrandom.shuffle(palavras)\ntreino, teste = palavras[:40], palavras[40:]\n\nletras = ".abcdefghijklmnopqrstuvwxyz"\nposicao = {letra: i for i, letra in enumerate(letras)}\n\ndef pares(palavra):\n    m = "." + palavra + "."\n    return [(posicao[m[i]], posicao[m[i + 1]]) for i in range(len(m) - 1)]\n\ndef contar(palavras, k):\n    N = np.full((27, 27), float(k))\n    for p in palavras:\n        for a, b in pares(p):\n            N[a, b] += 1\n    return N / N.sum(axis=1, keepdims=True)\n\ndef perda(P, palavras):\n    erros = [-np.log(P[a, b]) for p in palavras for a, b in pares(p)]\n    return float(np.mean(erros))\n\nks = [0.001, 0.01, 0.1, 1, 10, 100]\nperdas = []\nfor k in ks:\n    perdas.append(perda(contar(treino, k), teste))\n\nplt.semilogx(ks, perdas, 'o-')\nplt.xlabel('k')\nplt.ylabel('perda nas palavras de fora')\n\nmelhor_k = ks[perdas.index(min(perdas))]\nprint(melhor_k)\n`,
+                  checagem: `
+tem('melhor_k')
+if melhor_k is None:
+    falha('melhor_k ainda vale None. Escolha o k com a menor perda.')
+if melhor_k != 0.1:
+    falha('Esse não é o k com a menor perda. Olhe o ponto mais baixo do gráfico.')
+`,
+                  certo: 'O melhor k aqui é 0,1, menor que o 1 da aula. Com outra lista de palavras, o melhor k seria outro: por isso se mede em vez de chutar.',
+                },
+                {
+                  texto: `<p>Um detalhe importante: o <code>k</code> foi escolhido olhando a perda nas palavras de fora. Então essas palavras ajudaram a construir o modelo, e a perda nelas deixou de ser uma nota honesta.</p>`,
+                  tarefa: 'Como Karpathy sugere resolver isso?',
+                  opcoes: [
+                    { t: 'Não tem problema: é só usar a perda do teste mesmo.', por: 'Se o teste ajudou a escolher k, ele virou parte do treino.' },
+                    { t: 'Separar três grupos: treino para contar, validação para escolher k, e teste só no fim, uma vez.', certa: true },
+                    { t: 'Usar todas as palavras no treino e não testar.', por: 'Sem palavras de fora, não dá para saber se o modelo generaliza.' },
+                  ],
+                  erro: 'Pense em quantos grupos de palavras são necessários.',
+                  dica: 'Um grupo para contar, um para escolher, um para a nota final.',
+                  solucao: 'Treino, validação e teste. A validação escolhe k; o teste dá a nota final, sem ter participado de nenhuma escolha.',
+                  certo: 'Na aula seguinte, Karpathy usa exatamente essa divisão em três, com 80%, 10% e 10% dos nomes.',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
   ],
 }
