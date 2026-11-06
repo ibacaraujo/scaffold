@@ -1,5 +1,6 @@
 import { PARTES, CAPITULO } from './licoes.js'
 import { montarFigura } from './figuras.js'
+import { TRILHA, CURSO } from './trilha.js'
 
 const $ = (s) => document.querySelector(s)
 const LICOES = PARTES.flatMap((p) => p.modulos.flatMap((m) => m.licoes))
@@ -9,7 +10,7 @@ const CHAVE = 'scaffold_v2'
 const LIMITE_MS = 10000
 
 // ── Progresso: só neste aparelho. A página funciona mesmo sem armazenamento.
-let salvo = { feito: {}, codigo: {} }
+let salvo = { feito: {}, codigo: {}, aulas: {} }
 try { salvo = { ...salvo, ...JSON.parse(localStorage.getItem(CHAVE) || '{}') } } catch {}
 const guardar = () => { try { localStorage.setItem(CHAVE, JSON.stringify(salvo)) } catch {} }
 
@@ -19,8 +20,13 @@ const idDoPasso = (l, i) => `${l.id}.${i}`
 const passo = () => licao.passos[passoI]
 const ehCodigo = (p) => p.inicio !== undefined
 
+// Telas fora da lição: #inicio e #trilha. Sem nada no endereço, abre o início.
+let tela = 'inicio'
 function lerHash() {
-  const [id, i] = location.hash.slice(1).split('/')
+  const h = location.hash.slice(1)
+  if (h === '' || h === 'inicio' || h === 'trilha') { tela = h || 'inicio'; return true }
+  tela = 'licao'
+  const [id, i] = h.split('/')
   const l = LICOES.find((x) => x.id === id)
   if (l) { licao = l; passoI = Math.min(Math.max(Number(i) || 0, 0), l.passos.length - 1); return true }
   return false
@@ -289,7 +295,7 @@ function desenharPasso() {
 
 // ── A lista de lições
 function desenharLista() {
-  $('#trilha').innerHTML = PARTES.map((parte) => `
+  $('#lista-licoes').innerHTML = PARTES.map((parte) => `
     <section class="parte">
       <h3 class="parte__t">${parte.titulo}</h3>
       ${parte.modulos.map((m) => `
@@ -304,7 +310,103 @@ function desenharLista() {
 }
 const abrirLista = (sim) => { $('#lista').hidden = !sim; $('#fundo').hidden = !sim; if (sim) $('#lista-fechar').focus() }
 
+// ── Início e trilha
+const contar = (lista) => {
+  let feitos = 0, total = 0
+  lista.forEach((l) => l.passos.forEach((_, i) => { total++; if (salvo.feito[idDoPasso(l, i)]) feitos++ }))
+  return { feitos, total }
+}
+const algumFeito = () => Object.keys(salvo.feito).length > 0
+function onde() {
+  // Se ainda não começou, o botão leva à primeira lição; senão, ao primeiro passo por fazer.
+  const [l, i] = primeiroPorFazer()
+  const tudo = contar(LICOES)
+  return { l, i, href: `#${l.id}/${i}`, comecou: algumFeito(), acabou: tudo.feitos === tudo.total }
+}
+const barrinha = (c) => `<div class="barrinha"><span class="barrinha__t"><i style="width:${c.total ? Math.round(100 * c.feitos / c.total) : 0}%"></i></span>${c.feitos} de ${c.total} passos</div>`
+function cartaoCapitulo(cap) {
+  if (!cap.pronto) return `
+    <article class="cap">
+      <p class="cap__n">Capítulo ${cap.n}</p>
+      <h3 class="cap__t">${cap.titulo}</h3>
+      <dl class="cap__partes">
+        <div><dt>Matemática</dt><dd>${cap.matematica}</dd></div>
+        <div><dt>Programação</dt><dd>${cap.programacao}</dd></div>
+      </dl>
+      <div class="cap__acoes"><span class="selo">Em breve</span></div>
+    </article>`
+  const o = onde()
+  return `
+    <article class="cap">
+      <p class="cap__n">Capítulo ${cap.n}</p>
+      <h3 class="cap__t">${cap.titulo}</h3>
+      <dl class="cap__partes">
+        ${PARTES.map((p) => `<div><dt>${p.titulo}</dt><dd>${p.modulos.map((m) => m.titulo).join(', ')}</dd>${barrinha(contar(licoesDa(p)))}</div>`).join('')}
+      </dl>
+      <div class="cap__acoes">
+        ${o.acabou ? '<span class="selo selo--ok">Capítulo feito</span>' : `<a class="botao" href="${o.href}">${o.comecou ? 'Continuar' : 'Começar'}</a>`}
+        <button class="link" type="button" data-abrir-lista>Ver as lições</button>
+      </div>
+    </article>`
+}
+function cartaoAula(cap, comCheck = true) {
+  const a = cap.aula
+  return `
+    <article class="aula">
+      <p class="cap__n">Aula ${cap.n} do Karpathy</p>
+      <h3 class="cap__t">${a.titulo}</h3>
+      <p class="aula__sub">${a.subtitulo}</p>
+      <p class="aula__p">${a.constroi}</p>
+      <div class="aula__acoes">
+        <a class="aula__ver" href="${a.url}" target="_blank" rel="noopener"><svg width="12" height="14" viewBox="0 0 12 14" aria-hidden="true"><path d="M0 0l12 7-12 7z" fill="currentColor"/></svg>Assistir no YouTube</a>
+        <span class="aula__dur">${a.duracao}</span>
+        ${comCheck ? `<label class="aula__vi"><input type="checkbox" data-aula="${cap.n}"${salvo.aulas[cap.n] ? ' checked' : ''}>Já assisti</label>` : ''}
+      </div>
+    </article>`
+}
+function desenharTrilha() {
+  const capFeito = (cap) => cap.pronto && onde().acabou
+  $('#linha').innerHTML = TRILHA.map((cap) => {
+    const estado = cap.pronto ? ' linha__item--pronto' : ' linha__item--breve'
+    return `
+      <li class="linha__item linha__item--cap${estado}${capFeito(cap) ? ' linha__item--feito' : ''}">
+        <span class="linha__no" aria-hidden="true">${capFeito(cap) ? '✓' : cap.n}</span>${cartaoCapitulo(cap)}
+      </li>
+      <li class="linha__item linha__item--aula${estado}${salvo.aulas[cap.n] ? ' linha__item--feito' : ''}">
+        <span class="linha__no" aria-hidden="true">${salvo.aulas[cap.n] ? '✓' : '<svg width="12" height="14" viewBox="0 0 12 14"><path d="M1 0l11 7-11 7z" fill="currentColor"/></svg>'}</span>${cartaoAula(cap)}
+      </li>`
+  }).join('')
+}
+function desenharInicio() {
+  const o = onde()
+  const texto = o.acabou ? 'Rever o Capítulo 1' : o.comecou ? 'Continuar' : 'Começar pelo Capítulo 1'
+  $('#capa-seguir').textContent = texto
+  $('#capa-seguir').href = o.href
+  $('#capa-onde').hidden = !o.comecou || o.acabou
+  $('#capa-onde').textContent = `Você parou em: ${parteDe(o.l).titulo}, ${o.l.titulo}.`
+  $('#agora').innerHTML = cartaoCapitulo(TRILHA[0]) + cartaoAula(TRILHA[0], false)
+}
+function desenharTela() {
+  const fora = tela !== 'licao'
+  $('.app').classList.toggle('app--fora', fora)
+  $('#tela-inicio').hidden = tela !== 'inicio'
+  $('#tela-trilha').hidden = tela !== 'trilha'
+  $('#tela-licao').hidden = fora
+  $('#link-trilha').classList.toggle('topo__trilha--atual', tela === 'trilha')
+  const o = onde()
+  $('#topo-seguir').textContent = o.comecou ? 'Continuar' : 'Começar'
+  $('#topo-seguir').href = o.href
+  abrirLista(false)
+  if (tela === 'inicio') { document.title = 'Scaffold'; desenharInicio() }
+  else if (tela === 'trilha') { document.title = 'A trilha · Scaffold'; desenharTrilha() }
+  else { desenharPasso(); return }
+  desenharLista()
+  window.scrollTo(0, 0)
+}
+document.addEventListener('click', (e) => { if (e.target.closest('[data-abrir-lista]')) abrirLista(true) })
+
 // ── Começar
+$('#capa-curso').href = CURSO
 $('#capitulo').textContent = CAPITULO.titulo
 $('#link-curso').href = CAPITULO.curso
 $('#link-aula').href = CAPITULO.aula
@@ -322,9 +424,17 @@ $('#ver-solucao').onclick = () => { $('#solucao').hidden = false }
 $('#abrir-lista').onclick = () => abrirLista(true)
 $('#lista-fechar').onclick = () => abrirLista(false)
 $('#fundo').onclick = () => abrirLista(false)
-$('#lista').addEventListener('click', (e) => { if (e.target.closest('#trilha a')) abrirLista(false) })
+$('#lista').addEventListener('click', (e) => { if (e.target.closest('#lista-licoes a')) abrirLista(false) })
 addEventListener('keydown', (e) => { if (e.key === 'Escape') abrirLista(false) })
-addEventListener('hashchange', () => { if (lerHash()) desenharPasso() })
+addEventListener('hashchange', () => { if (lerHash()) desenharTela() })
+$('#linha').addEventListener('change', (e) => {
+  const n = e.target.dataset.aula
+  if (!n) return
+  if (e.target.checked) salvo.aulas[n] = true
+  else delete salvo.aulas[n]
+  guardar()
+  desenharTrilha()
+})
 
-if (!lerHash()) [licao, passoI] = primeiroPorFazer()
-desenharPasso()
+if (!lerHash()) { tela = 'licao'; [licao, passoI] = primeiroPorFazer() }
+desenharTela()

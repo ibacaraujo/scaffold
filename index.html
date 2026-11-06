@@ -185,20 +185,192 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
 @media (max-width: 400px) {
   .topo__marca { display: none; }
 }
+
+/* telas fora da lição: início e trilha */
+.app--fora .so-licao { display: none !important; }
+.app:not(.app--fora) .so-fora { display: none !important; }
+.app--fora { grid-template-rows: 56px auto; height: auto; min-height: 100dvh; }
+.app--fora .topo { position: sticky; top: 0; z-index: 10; background: #fff; }
+.topo__marca { color: var(--fg); text-decoration: none; }
+.topo__trilha { margin-left: auto; font-size: 15px; font-weight: 500; color: var(--mute); text-decoration: none; padding: 7px 14px; border-radius: 999px; }
+.topo__trilha:hover { color: var(--fg); background: var(--bg-2); }
+.topo__trilha--atual { color: var(--sky); background: #e6ebf8; }
+.app:not(.app--fora) .topo__trilha + .topo__lista { margin-left: 0; }
+.topo__seguir { padding: 7px 18px; }
+.tela { min-width: 0; }
+
+.capa { background: var(--night); color: var(--night-fg); }
+.capa__in { max-width: 1200px; margin: 0 auto; padding: clamp(48px, 7vw, 110px) clamp(16px, 4vw, 56px); display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: clamp(24px, 4vw, 64px); align-items: center; }
+.capa__sobre { margin: 0 0 18px; font-size: .82em; color: var(--night-mute); }
+.capa__sobre a { color: #f5d78e; }
+.capa__sobre--escuro { color: var(--mute); }
+.capa__t { margin: 0; font-size: clamp(34px, 4vw, 64px); font-weight: 500; line-height: 1.05; letter-spacing: -.035em; color: #fff; }
+.capa__p { margin: 20px 0 0; max-width: 34em; color: var(--night-fg); }
+.capa__acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 26px; margin-top: 32px; }
+.botao--claro { background: #f5d78e; color: var(--night); padding: 12px 26px; font-size: 16px; }
+.botao--claro:hover { background: #fff; }
+.capa__link { font-size: 16px; color: #fff; text-underline-offset: 4px; }
+.capa__onde { margin: 16px 0 0; font-size: .82em; color: var(--night-mute); }
+.capa__fig { width: 100%; height: auto; }
+.capa__fig-n { font: 400 13px var(--mono); fill: var(--night-mute); }
+
+.faixa { max-width: 1200px; margin: 0 auto; padding: clamp(40px, 5vw, 80px) clamp(16px, 4vw, 56px); }
+.faixa--cinza { max-width: none; background: var(--bg-2); }
+.faixa--cinza > * { max-width: 1088px; margin: 0 auto; }
+.faixa__t { margin: 0 0 24px; font-size: clamp(24px, 2vw, 32px); font-weight: 500; letter-spacing: -.02em; }
+.passos-capa { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(20px, 3vw, 44px); }
+.passos-capa h3 { margin: 14px 0 6px; font-size: 1.05em; font-weight: 600; }
+.passos-capa p { margin: 0; color: var(--fg-2); font-size: .94em; }
+.passos-capa__n { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #e6ebf8; color: var(--sky); font-weight: 600; font-size: 16px; }
+.agora { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 24px 48px; align-items: start; }
+.agora__p { margin: -12px 0 0; color: var(--mute); font-size: .9em; }
+.agora__par { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.rodape { max-width: 1200px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 56px) 40px; font-size: 14px; color: var(--mute); }
+
+/* cartões da trilha (também usados no início) */
+.cap { padding: 20px 22px; background: #fff; border: 1px solid var(--rule); border-radius: 14px; font-size: 16px; }
+.cap__n { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .02em; color: var(--sky); text-transform: uppercase; }
+.cap__t { margin: 4px 0 12px; font-size: 21px; font-weight: 500; letter-spacing: -.015em; line-height: 1.2; }
+.cap__partes { display: grid; gap: 12px; margin: 0; }
+.cap__partes dt { font-size: 13px; font-weight: 600; color: var(--fg); }
+.cap__partes dd { margin: 2px 0 0; color: var(--fg-2); font-size: 15px; line-height: 1.5; }
+.barrinha { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 13px; color: var(--mute); }
+.barrinha__t { flex: 1; height: 6px; border-radius: 3px; background: var(--rule); overflow: hidden; }
+.barrinha__t i { display: block; height: 100%; background: var(--sky); border-radius: 3px; }
+.cap__acoes { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin-top: 18px; }
+.cap__acoes .link { font-size: 15px; }
+.selo { display: inline-block; padding: 3px 10px; border-radius: 999px; background: var(--bg-2); color: var(--mute); font-size: 13px; font-weight: 500; }
+.selo--ok { background: var(--ok-bg); color: var(--ok); }
+.aula { padding: 20px 22px; background: var(--night-2); color: var(--night-fg); border-radius: 14px; font-size: 16px; }
+.aula .cap__n { color: #f5d78e; }
+.aula .cap__t { color: #fff; margin-bottom: 2px; }
+.aula__sub { margin: 0 0 10px; color: var(--night-mute); font-size: 15px; }
+.aula__p { margin: 0; line-height: 1.5; }
+.aula__acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; margin-top: 16px; font-size: 15px; }
+.aula__ver { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 999px; background: #eef2ff; color: var(--night-2); font-weight: 500; text-decoration: none; }
+.aula__ver:hover { background: #fff; }
+.aula__dur { color: var(--night-mute); font-family: var(--mono); font-size: 14px; }
+.aula__vi { display: inline-flex; align-items: center; gap: 8px; color: var(--night-fg); cursor: pointer; }
+.aula__vi input { width: 17px; height: 17px; accent-color: #f5d78e; margin: 0; }
+
+.trilha { max-width: 860px; margin: 0 auto; padding: clamp(36px, 5vw, 72px) clamp(16px, 4vw, 40px) 56px; }
+.trilha__t { margin: 0; font-size: clamp(34px, 3.4vw, 54px); font-weight: 500; letter-spacing: -.035em; line-height: 1.05; }
+.trilha__p { margin: 16px 0 0; color: var(--fg-2); max-width: 36em; }
+.legenda { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-top: 20px; font-size: 14px; color: var(--mute); }
+.legenda span { display: inline-flex; align-items: center; gap: 8px; }
+.legenda__m { width: 14px; height: 14px; border-radius: 50%; }
+.legenda__m--cap { background: var(--sky); }
+.legenda__m--aula { background: #f5d78e; border: 2px solid var(--night-2); }
+.linha { list-style: none; margin: 40px 0 0; padding: 0; position: relative; }
+.linha::before { content: ""; position: absolute; left: 19px; top: 20px; bottom: 20px; width: 2px; background: var(--rule); }
+.linha__item { position: relative; padding-left: 60px; margin-bottom: 18px; }
+.linha__item--aula { margin-bottom: 40px; }
+.linha__no { position: absolute; left: 0; top: 16px; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; font-size: 15px; font-weight: 600; background: #fff; border: 2px solid var(--rule); color: var(--mute); }
+.linha__item--cap.linha__item--pronto .linha__no { background: var(--sky); border-color: var(--sky); color: #fff; }
+.linha__item--aula .linha__no { background: var(--night-2); border-color: var(--night-2); color: #f5d78e; }
+.linha__item--feito .linha__no { background: var(--ok); border-color: var(--ok); color: #fff; }
+.linha__item--breve .cap { background: var(--bg-2); border-style: dashed; }
+.linha__item--breve .aula { opacity: .78; }
+.linha__item--breve .selo { background: #fff; border: 1px solid var(--rule); }
+.trilha__fim { margin: 8px 0 0 60px; font-size: 14px; color: var(--mute); }
+
+@media (max-width: 900px) {
+  .app--fora { grid-template-rows: 52px auto; }
+  .topo__trilha { padding: 5px 10px; font-size: 13.5px; }
+  .app:not(.app--fora) .topo__trilha { margin-left: auto; }
+  .topo__seguir { padding: 6px 14px; font-size: 13.5px; }
+  .capa__in { grid-template-columns: 1fr; }
+  .capa__fig { max-width: 420px; }
+  .passos-capa, .agora, .agora__par { grid-template-columns: 1fr; }
+  .linha::before { left: 15px; }
+  .linha__item { padding-left: 46px; }
+  .linha__no { width: 32px; height: 32px; font-size: 13px; top: 18px; }
+  .trilha__fim { margin-left: 46px; }
+}
+@media (max-width: 400px) {
+  .app--fora .topo__marca { display: inline; }
+}
 </style>
 </head>
 <body>
 <div class="app">
   <header class="topo">
-    <span class="topo__marca">Scaffold</span>
-    <span class="topo__cap" id="capitulo"></span>
-    <nav class="abas" aria-label="Partes do capítulo">
+    <a class="topo__marca" href="#inicio">Scaffold</a>
+    <span class="topo__cap so-licao" id="capitulo"></span>
+    <nav class="abas so-licao" aria-label="Partes do capítulo">
       <a class="aba" href="#letras/0" data-parte="matematica">Matemática</a>
       <a class="aba" href="#programa/0" data-parte="programacao">Programação</a>
     </nav>
-    <button class="topo__lista" id="abrir-lista">Lições</button>
+    <a class="topo__trilha" id="link-trilha" href="#trilha">Trilha</a>
+    <button class="topo__lista so-licao" id="abrir-lista">Lições</button>
+    <a class="botao topo__seguir so-fora" id="topo-seguir" href="#">Começar</a>
   </header>
-  <main class="corpo">
+  <main class="tela" id="tela-inicio" hidden>
+    <section class="capa">
+      <div class="capa__in">
+        <div class="capa__texto">
+          <p class="capa__sobre">Para acompanhar <a id="capa-curso" target="_blank" rel="noopener">Neural Networks: Zero to Hero</a>, de Andrej Karpathy</p>
+          <h1 class="capa__t">A matemática e a programação das redes neurais, começando do início.</h1>
+          <p class="capa__p">Lições curtas que preparam você para compreender cada aula do curso. Não é preciso saber nada antes: nem derivada, nem Python.</p>
+          <div class="capa__acoes">
+            <a class="botao botao--claro" id="capa-seguir" href="#">Começar</a>
+            <a class="capa__link" href="#trilha">Ver a trilha completa</a>
+          </div>
+          <p class="capa__onde" id="capa-onde" hidden></p>
+        </div>
+        <svg class="capa__fig" viewBox="0 0 420 320" aria-hidden="true">
+          <g stroke="#24376c" stroke-width="1">
+            <path d="M20 40H400M20 100H400M20 160H400M20 220H400M20 280H400M60 20V300M140 20V300M220 20V300M300 20V300M380 20V300"/>
+          </g>
+          <path d="M40 270 C 120 260, 170 230, 220 170 S 320 50, 400 40" fill="none" stroke="#a9bdf5" stroke-width="3"/>
+          <path d="M120 290 L 330 50" stroke="#f5d78e" stroke-width="2.5" stroke-dasharray="7 6"/>
+          <circle cx="222" cy="168" r="8" fill="#f5d78e"/>
+          <path d="M222 168 H 272 V 111" fill="none" stroke="#e6ebf8" stroke-width="1.5"/>
+          <text x="236" y="186" class="capa__fig-n">um passo</text>
+          <text x="280" y="144" class="capa__fig-n">quanto subiu</text>
+        </svg>
+      </div>
+    </section>
+
+    <section class="faixa">
+      <h2 class="faixa__t">Como funciona</h2>
+      <ol class="passos-capa">
+        <li><span class="passos-capa__n">1</span><h3>Um capítulo antes de cada aula</h3><p>Cada capítulo do Scaffold prepara exatamente o que a próxima aula do Karpathy vai usar. Você faz o capítulo, depois assiste à aula.</p></li>
+        <li><span class="passos-capa__n">2</span><h3>Matemática e programação</h3><p>São duas partes independentes. Comece pela que quiser: das variáveis à derivada, e do primeiro <code>print</code> às funções e listas.</p></li>
+        <li><span class="passos-capa__n">3</span><h3>Prática na hora</h3><p>Os gráficos se mexem, as respostas são conferidas na hora e o Python roda no navegador. Nada para instalar.</p></li>
+      </ol>
+    </section>
+
+    <section class="faixa faixa--cinza">
+      <div class="agora">
+        <div>
+          <h2 class="faixa__t">Onde você está</h2>
+          <p class="agora__p">O progresso fica guardado neste aparelho.</p>
+        </div>
+        <div class="agora__par" id="agora"></div>
+      </div>
+    </section>
+
+    <footer class="rodape">O Scaffold não é afiliado ao curso e não refaz as aulas: prepara a pessoa para compreendê-las. Um projeto da Bragat.</footer>
+  </main>
+
+  <main class="tela" id="tela-trilha" hidden>
+    <div class="trilha">
+      <header class="trilha__topo">
+        <p class="capa__sobre capa__sobre--escuro">Scaffold + Neural Networks: Zero to Hero</p>
+        <h1 class="trilha__t">A trilha</h1>
+        <p class="trilha__p">O curso tem nove aulas. Antes de cada uma, um capítulo do Scaffold ensina a matemática e a programação que ela usa. Faça o capítulo, assista à aula, siga para o próximo.</p>
+        <div class="legenda">
+          <span><i class="legenda__m legenda__m--cap"></i>Capítulo do Scaffold</span>
+          <span><i class="legenda__m legenda__m--aula"></i>Aula do Karpathy</span>
+        </div>
+      </header>
+      <ol class="linha" id="linha"></ol>
+      <p class="trilha__fim">As aulas estão em inglês, no YouTube. O Scaffold não é afiliado ao curso.</p>
+    </div>
+  </main>
+
+  <main class="corpo" id="tela-licao">
     <section class="instrucao">
       <p class="licao-n" id="licao-n"></p>
       <h1 id="licao-t"></h1>
@@ -251,7 +423,7 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
 <aside class="lista" id="lista" aria-label="Lições do capítulo" hidden>
   <div class="lista__topo"><h2>Capítulo 1</h2><button class="link" id="lista-fechar">Fechar</button></div>
   <p class="lista__intro">A matemática e a programação para compreender a <a id="link-aula" target="_blank" rel="noopener">primeira aula</a> de <a id="link-curso" target="_blank" rel="noopener">Neural Networks: Zero to Hero</a>, de Andrej Karpathy. Não é preciso saber nada antes. As duas partes são independentes: comece pela que quiser.</p>
-  <div class="trilha" id="trilha"></div>
+  <div id="lista-licoes"></div>
 </aside>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
