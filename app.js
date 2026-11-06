@@ -252,7 +252,7 @@ function mostrarResultado(box, tipo, msg, tecnico) {
     add('p', `Você chegou ao fim dos exercícios da aula ${cap.n}.${s ? '' : ' O próximo capítulo ainda está sendo preparado.'}`, 'resultado__nota')
     if (s) botao(`Ir para o Capítulo ${capSeg.n}`, () => ir(...s))
   } else if (s) {
-    const b = add('button', fimDaLicao ? `Próxima lição: ${s[0].titulo}` : 'Próximo passo', 'botao')
+    const b = add('button', parteDe(licao).exercicios ? 'Próximo exercício' : fimDaLicao ? `Próxima lição: ${s[0].titulo}` : 'Próximo passo', 'botao')
     b.id = 'avancar'
     b.type = 'button'
     b.onclick = () => ir(...s)
@@ -276,10 +276,14 @@ function desenharPasso() {
     a.hidden = !cap.partes.some((p) => p.id === a.dataset.parte)
   })
   const nDaParte = licoesDa(parte).indexOf(licao) + 1
-  $('#licao-n').textContent = `${parte.titulo}, lição ${nDaParte} de ${licoesDa(parte).length}`
+  // Depois da aula, cada lição é um exercício só, sem contexto nem passos.
+  $('#licao-n').textContent = parte.exercicios ? `${parte.titulo}, exercício ${nDaParte} de ${licoesDa(parte).length}` : `${parte.titulo}, lição ${nDaParte} de ${licoesDa(parte).length}`
   $('#licao-t').textContent = licao.titulo
   // O contexto da aula abre a lição: aparece só no primeiro passo.
-  $('#porque').hidden = passoI !== 0
+  $('#porque').hidden = passoI !== 0 || !licao.porque
+  $('#passos').hidden = licao.passos.length === 1
+  $('#voltar').textContent = parte.exercicios ? 'Voltar ao exercício anterior' : 'Voltar ao passo anterior'
+  $('#pular').textContent = parte.exercicios ? 'Pular este exercício' : 'Pular este passo'
   $('#porque-t').textContent = licao.porque
   $('#texto').innerHTML = p.texto
   desenharPontos()
@@ -366,7 +370,7 @@ function onde() {
   }
   return alvo(CAPITULOS[0], [LICOES[0], 0], 'fim')
 }
-const barrinha = (c) => `<div class="barrinha"><span class="barrinha__t"><i style="width:${c.total ? Math.round(100 * c.feitos / c.total) : 0}%"></i></span>${c.feitos} de ${c.total} passos</div>`
+const barrinha = (c, unidade = 'passos') => `<div class="barrinha"><span class="barrinha__t"><i style="width:${c.total ? Math.round(100 * c.feitos / c.total) : 0}%"></i></span>${c.feitos} de ${c.total} ${unidade}</div>`
 function cartaoCapitulo(cap) {
   if (!cap.pronto) return `
     <article class="cap">
@@ -408,22 +412,16 @@ function cartaoAula(cap, comCheck = true) {
     </article>`
 }
 function cartaoDepois(cap) {
-  // Os exercícios de depois da aula, agrupados pelos módulos, com cada lição marcada quando feita.
-  const parte = parteDepois(capN(cap.n)), dep = licoesDa(parte), c = contar(dep)
+  // Os exercícios de depois da aula: uma lista numerada, cada um marcado quando feito.
+  const dep = licoesDepois(capN(cap.n)), c = contar(dep)
   const [l, i] = primeiroPorFazer(dep)
   return `
     <article class="depois">
       <p class="cap__n">Depois da aula ${cap.n}</p>
       <h3 class="cap__t">Exercícios</h3>
-      <p class="depois__resumo">${dep.length} lições e ${c.total} exercícios, para fazer depois de assistir à aula.</p>
-      <div class="depois__mods">
-        ${parte.modulos.map((m) => `
-          <div class="depois__mod">
-            <h4>${m.titulo}</h4>
-            <ul>${m.licoes.map((x) => `<li><a href="#${x.id}/0"><span class="marca${feito([x]) ? ' marca--feita' : ''}" aria-hidden="true"></span>${x.titulo}</a></li>`).join('')}</ul>
-          </div>`).join('')}
-      </div>
-      ${barrinha(c)}
+      <p class="depois__resumo">${dep.length} exercícios simples para praticar o que a aula mostrou.</p>
+      <ol class="depois__lista">${dep.map((x) => `<li><a href="#${x.id}/0"><span class="marca${feito([x]) ? ' marca--feita' : ''}" aria-hidden="true"></span>${x.titulo}</a></li>`).join('')}</ol>
+      ${barrinha(c, 'exercícios')}
       <div class="cap__acoes"><a class="botao" href="#${l.id}/${i}">${feito(dep) ? 'Rever' : c.feitos ? 'Continuar' : 'Fazer os exercícios'}</a></div>
     </article>`
 }
