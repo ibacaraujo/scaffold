@@ -274,6 +274,10 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
 .linha__item--breve .aula { opacity: .78; }
 .linha__item--breve .selo { background: #fff; border: 1px solid var(--rule); }
 .trilha__fim { margin: 8px 0 0 60px; font-size: 14px; color: var(--mute); }
+.trilha__topo--papers { margin-top: 72px; padding-top: 40px; border-top: 1px solid var(--rule); }
+.paper__ref { margin: -6px 0 10px; font-size: 14px; }
+.paper__ref a { color: var(--mute); }
+.paper__ref a:hover { color: var(--sky); }
 
 @media (max-width: 900px) {
   .app--fora { grid-template-rows: 52px auto; }
@@ -399,6 +403,13 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
       </header>
       <ol class="linha" id="linha"></ol>
       <p class="trilha__fim">As aulas estão em inglês, no YouTube. O Scaffold não é afiliado ao curso.</p>
+      <header class="trilha__topo trilha__topo--papers">
+        <p class="capa__sobre capa__sobre--escuro">Depois do curso</p>
+        <h2 class="trilha__t">Papers</h2>
+        <p class="trilha__p">No curso, o Karpathy implementa papers: Bengio et al. (2003) no makemore, o BatchNorm, a WaveNet, Attention Is All You Need e o GPT-2. Aqui o método continua por sua conta: ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e fazer uma pergunta que o paper não fez.</p>
+        <p class="trilha__p">O Paper 1 ensina o método. Os outros são sugestões; a ficha do fim do Paper 1 serve para qualquer paper que você escolher.</p>
+      </header>
+      <ol class="linha" id="linha-papers"></ol>
     </div>
   </main>
 
@@ -455,7 +466,7 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
 <aside class="lista" id="lista" aria-label="Lições do capítulo" hidden>
   <div class="lista__topo"><h2 id="lista-titulo">Capítulo 1</h2><button class="link" id="lista-fechar">Fechar</button></div>
   <p class="lista__nav"><a href="#inicio">Início</a> · <a href="#trilha">A trilha</a></p>
-  <p class="lista__intro">A matemática e a programação para compreender a <a id="link-aula" target="_blank" rel="noopener">aula 1</a> de <a id="link-curso" target="_blank" rel="noopener">Neural Networks: Zero to Hero</a>, de Andrej Karpathy. Não é preciso saber nada antes. As duas primeiras partes são independentes: comece pela que quiser. Quando há uma parte "Depois da aula", ela é para depois de assistir.</p>
+  <p class="lista__intro" id="lista-intro"></p>
   <div id="lista-licoes"></div>
 </aside>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
