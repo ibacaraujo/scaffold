@@ -1,6 +1,6 @@
 import { CAPITULOS } from './licoes.js'
 import { montarFigura } from './figuras.js'
-import { TRILHA, CURSO } from './trilha.js'
+import { TRILHA, CURSO, PAPERS } from './trilha.js'
 
 const $ = (s) => document.querySelector(s)
 const licoesDa = (parte) => parte.modulos.flatMap((m) => m.licoes)
@@ -13,6 +13,9 @@ const LICOES = CAPITULOS.flatMap((c) => c.partes.flatMap(licoesDa))
 const parteDe = (l) => CAPITULOS.flatMap((c) => c.partes).find((p) => licoesDa(p).includes(l))
 const capDe = (l) => CAPITULOS.find((c) => c.partes.some((p) => licoesDa(p).includes(l)))
 const capN = (n) => CAPITULOS.find((c) => c.n === n)
+// Duas trilhas: o curso (capítulos antes das aulas) e, depois dele, os papers.
+const mesmaTrilha = (a, b) => !!capDe(a).paper === !!capDe(b).paper
+const CURSO_CAPS = CAPITULOS.filter((c) => !c.paper)
 const CHAVE = 'scaffold_v2'
 const LIMITE_MS = 10000
 
@@ -48,12 +51,12 @@ const ir = (l, i) => { location.hash = `${l.id}/${i}` }
 function seguinte() {
   if (passoI + 1 < licao.passos.length) return [licao, passoI + 1]
   const n = LICOES[LICOES.indexOf(licao) + 1]
-  return n ? [n, 0] : null
+  return n && mesmaTrilha(n, licao) ? [n, 0] : null
 }
 function anterior() {
   if (passoI > 0) return [licao, passoI - 1]
   const n = LICOES[LICOES.indexOf(licao) - 1]
-  return n ? [n, n.passos.length - 1] : null
+  return n && mesmaTrilha(n, licao) ? [n, n.passos.length - 1] : null
 }
 
 // ── O editor
@@ -242,7 +245,14 @@ function mostrarResultado(box, tipo, msg, tecnico) {
   const botao = (texto, aoClicar) => { const b = add('button', texto, 'botao'); b.id = 'avancar'; b.type = 'button'; b.onclick = aoClicar; return b }
   const vaiParaDepois = s && !noDepois && parteDe(s[0]).id === 'depois'
   const fimDoCapitulo = !noDepois && fimDaLicao && (!s || capSeg !== cap)
-  if (vaiParaDepois || fimDoCapitulo) {
+  if (cap.paper && (vaiParaDepois || fimDoCapitulo)) {
+    // Num capítulo de paper não há aula: depois de implementar, vem a ficha do seu próprio paper.
+    const n = add('p', '', 'resultado__nota')
+    n.innerHTML = `Você percorreu o método inteiro no paper de ${cap.paper.autores} (${cap.paper.ano}). Agora é a vez de um paper seu: a ficha leva o método para qualquer paper da sua leitura.`
+    if (s) botao('Ir para a ficha do seu paper', () => ir(...s))
+  } else if (cap.paper && noDepois && fimDaLicao && !s) {
+    add('p', 'A ficha está pronta. Implemente o núcleo com a mesma simplicidade, reproduza o número e escreva sobre a sua pergunta.', 'resultado__nota')
+  } else if (vaiParaDepois || fimDoCapitulo) {
     // Entre o capítulo e o que vem depois fica a aula: a pessoa assiste antes de seguir.
     const n = add('p', '', 'resultado__nota')
     const depois = vaiParaDepois ? 'Depois de assistir, siga para os exercícios.' : s ? `Depois de assistir, siga para o Capítulo ${capSeg.n}.` : 'O próximo capítulo ainda está sendo preparado.'
@@ -270,10 +280,14 @@ function desenharPasso() {
   erros = 0
   document.title = `${licao.titulo} · Scaffold`
   const cap = capDe(licao)
-  $('#capitulo').textContent = cap.titulo
+  $('#capitulo').textContent = cap.paper ? `${cap.titulo}: ${cap.paper.autores} (${cap.paper.ano})` : cap.titulo
   document.querySelectorAll('.aba').forEach((a) => {
     a.classList.toggle('aba--atual', a.dataset.parte === parte.id)
-    a.hidden = !cap.partes.some((p) => p.id === a.dataset.parte)
+    const p = cap.partes.find((x) => x.id === a.dataset.parte)
+    a.hidden = !p
+    // Os capítulos de paper dão nomes próprios às partes; os do curso usam os nomes de sempre.
+    a.dataset.rotulo ??= a.innerHTML
+    a.innerHTML = cap.paper && p ? p.titulo : a.dataset.rotulo
   })
   const nDaParte = licoesDa(parte).indexOf(licao) + 1
   // Depois da aula, cada lição é um exercício só, sem contexto nem passos.
@@ -329,8 +343,9 @@ function desenharPasso() {
 let capDaLista = null
 function desenharLista(cap = capDaLista || capDe(licao)) {
   $('#lista-titulo').textContent = cap.titulo
-  $('#link-aula').href = cap.aula
-  $('#link-aula').textContent = `aula ${cap.n}`
+  $('#lista-intro').innerHTML = cap.paper
+    ? `O método para implementar um paper no estilo do Karpathy, aplicado a <a href="${cap.paper.url}" target="_blank" rel="noopener">${cap.paper.autores} (${cap.paper.ano})</a>. Primeiro ler, depois implementar; a última parte leva o método para um paper seu.`
+    : `A matemática e a programação para compreender a <a href="${cap.aula}" target="_blank" rel="noopener">aula ${cap.n}</a> de <a href="${CURSO}" target="_blank" rel="noopener">Neural Networks: Zero to Hero</a>, de Andrej Karpathy. Não é preciso saber nada antes. As duas primeiras partes são independentes: comece pela que quiser. Quando há uma parte "Depois da aula", ela é para depois de assistir.`
   $('#lista-licoes').innerHTML = cap.partes.map((parte) => `
     <section class="parte">
       <h3 class="parte__t">${parte.titulo}</h3>
@@ -363,8 +378,8 @@ function onde() {
   // Capítulo por capítulo: primeiro as lições de antes da aula; com elas feitas, os exercícios de depois
   // (se o próximo capítulo ainda não começou); com tudo feito, o começo do curso.
   const alvo = (cap, [l, i], tipo) => ({ cap, l, i, tipo, href: `#${l.id}/${i}`, comecou: algumFeito() })
-  for (const [k, c] of CAPITULOS.entries()) {
-    const prox = CAPITULOS[k + 1]
+  for (const [k, c] of CURSO_CAPS.entries()) {
+    const prox = CURSO_CAPS[k + 1]
     if (!feito(licoesAntes(c))) return alvo(c, primeiroPorFazer(licoesAntes(c)), 'cap')
     if (licoesDepois(c).length && !feito(licoesDepois(c)) && !(prox && contar(licoesAntes(prox)).feitos)) return alvo(c, primeiroPorFazer(licoesDepois(c)), 'depois')
   }
@@ -447,6 +462,41 @@ function desenharTrilha() {
       </li>` : ''}`
   }).join('')
 }
+function cartaoPaper(p) {
+  const ref = `<p class="paper__ref"><a href="${p.url}" target="_blank" rel="noopener">${p.ref}</a></p>`
+  if (!p.pronto) return `
+    <article class="cap">
+      <p class="cap__n">Paper ${p.n - 9}</p>
+      <h3 class="cap__t">${p.titulo}</h3>
+      ${ref}
+      <p class="aula__p">${p.constroi}</p>
+      <div class="cap__acoes"><span class="selo">Em breve</span></div>
+    </article>`
+  const c = capN(p.n), tudo = c.partes.flatMap(licoesDa), [l, i] = primeiroPorFazer(tudo)
+  return `
+    <article class="cap">
+      <p class="cap__n">Paper ${p.n - 9}</p>
+      <h3 class="cap__t">${p.titulo}</h3>
+      ${ref}
+      <p class="aula__p">${p.constroi}</p>
+      <dl class="cap__partes" style="margin-top:14px">
+        ${c.partes.map((x) => `<div><dt>${x.titulo}</dt><dd>${x.modulos.map((m) => m.titulo).join(', ')}</dd>${barrinha(contar(licoesDa(x)))}</div>`).join('')}
+      </dl>
+      <div class="cap__acoes">
+        ${feito(tudo) ? '<span class="selo selo--ok">Paper feito</span>' : `<a class="botao" href="#${l.id}/${i}">${contar(tudo).feitos ? 'Continuar' : 'Começar'}</a>`}
+        <button class="link" type="button" data-abrir-lista="${p.n}">Ver as lições</button>
+      </div>
+    </article>`
+}
+function desenharPapers() {
+  $('#linha-papers').innerHTML = PAPERS.map((p) => {
+    const ok = p.pronto && feito(capN(p.n).partes.flatMap(licoesDa))
+    return `
+      <li class="linha__item linha__item--cap linha__item--paper${p.pronto ? ' linha__item--pronto' : ' linha__item--breve'}${ok ? ' linha__item--feito' : ''}">
+        <span class="linha__no" aria-hidden="true">${ok ? '✓' : p.n - 9}</span>${cartaoPaper(p)}
+      </li>`
+  }).join('')
+}
 function desenharInicio() {
   const o = onde()
   const texto = !o.comecou ? 'Começar pelo Capítulo 1' : o.tipo === 'cap' ? `Continuar o Capítulo ${o.cap.n}` : o.tipo === 'depois' ? `Exercícios depois da aula ${o.cap.n}` : 'Rever o Capítulo 1'
@@ -469,7 +519,7 @@ function desenharTela() {
   $('#topo-seguir').href = o.href
   abrirLista(false)
   if (tela === 'inicio') { document.title = 'Scaffold'; desenharInicio() }
-  else if (tela === 'trilha') { document.title = 'A trilha · Scaffold'; desenharTrilha() }
+  else if (tela === 'trilha') { document.title = 'A trilha · Scaffold'; desenharTrilha(); desenharPapers() }
   else { desenharPasso(); return }
   desenharLista()
   window.scrollTo(0, 0)
@@ -478,7 +528,6 @@ document.addEventListener('click', (e) => { const b = e.target.closest('[data-ab
 
 // ── Começar
 $('#capa-curso').href = CURSO
-$('#link-curso').href = CURSO
 document.querySelectorAll('.aba').forEach((a) => {
   a.onclick = (e) => {
     e.preventDefault()

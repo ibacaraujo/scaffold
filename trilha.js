@@ -123,3 +123,67 @@ export const TRILHA = [
     },
   },
 ]
+
+// Depois do curso: papers. No curso, o Karpathy implementa papers aula a aula. Aqui o método continua:
+// ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e
+// fazer uma pergunta que o paper não fez. O Paper 1 ensina o método; os outros são sugestões, e a
+// ficha do fim do Paper 1 serve para qualquer paper escolhido na leitura do dia a dia.
+export const PAPERS = [
+  {
+    n: 10,
+    pronto: true,
+    titulo: 'Leis de escala',
+    ref: 'Kaplan et al. (2020), Scaling Laws for Neural Language Models',
+    url: 'https://arxiv.org/abs/2001.08361',
+    constroi: 'O método inteiro num paper só: ler a equação, medir o expoente, refazer a reta da Figura 1 e uma pergunta própria.',
+  },
+  {
+    n: 11,
+    titulo: 'Um GPT moderno',
+    ref: 'Su et al. (2021), RoFormer; Touvron et al. (2023), LLaMA',
+    url: 'https://arxiv.org/abs/2302.13971',
+    constroi: 'O GPT do curso com as peças de hoje: RoPE, RMSNorm e SwiGLU.',
+  },
+  {
+    n: 12,
+    titulo: 'Atenção em blocos',
+    ref: 'Dao et al. (2022), FlashAttention',
+    url: 'https://arxiv.org/abs/2205.14135',
+    constroi: 'A mesma atenção, calculada em pedaços, sem guardar a matriz inteira na memória.',
+  },
+  {
+    n: 13,
+    titulo: 'Ajustar com pouco',
+    ref: 'Hu et al. (2021), LoRA',
+    url: 'https://arxiv.org/abs/2106.09685',
+    constroi: 'Ajustar um modelo treinando só duas matrizes finas: W + BA.',
+  },
+  {
+    n: 14,
+    titulo: 'Aprender com preferências',
+    ref: 'Rafailov et al. (2023), Direct Preference Optimization',
+    url: 'https://arxiv.org/abs/2305.18290',
+    constroi: 'O pós-treino de um modelo a partir de pares de respostas, uma melhor que a outra.',
+  },
+  {
+    n: 15,
+    titulo: 'Imagens como sequências',
+    ref: 'Dosovitskiy et al. (2020), An Image is Worth 16x16 Words',
+    url: 'https://arxiv.org/abs/2010.11929',
+    constroi: 'O Transformer do curso lendo uma imagem cortada em quadradinhos.',
+  },
+  {
+    n: 16,
+    titulo: 'Prever a representação',
+    ref: 'Assran et al. (2023), I-JEPA',
+    url: 'https://arxiv.org/abs/2301.08243',
+    constroi: 'Um modelo que aprende prevendo o que uma parte escondida da imagem representa, não os pixels.',
+  },
+  {
+    n: 17,
+    titulo: 'Abrir o modelo',
+    ref: 'Bricken et al. (2023), Towards Monosemanticity',
+    url: 'https://transformer-circuits.pub/2023/monosemantic-features',
+    constroi: 'Um autoencoder esparso que separa as ativações de um modelo em ideias que dá para ler.',
+  },
+]
