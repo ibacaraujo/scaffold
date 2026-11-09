@@ -132,6 +132,7 @@ export const TRILHA = [
 export const PAPERS = [
   {
     n: 10,
+    pronto: true,
     titulo: 'Um world model que planeja',
     ref: 'Maes, Le Lidec, Scieur, LeCun & Balestriero (2026), LeWorldModel',
     url: 'https://arxiv.org/abs/2603.19312',
@@ -139,6 +140,7 @@ export const PAPERS = [
   },
   {
     n: 11,
+    pronto: true,
     titulo: 'Alinhar à linguagem, e superar',
     ref: 'Li et al. (2026), Language-Forcing: Semantic Alignment of Whole-Body World Action Models',
     url: 'https://arxiv.org/abs/2610.23894',

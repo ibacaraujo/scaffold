@@ -251,13 +251,13 @@ function mostrarResultado(box, tipo, msg, tecnico) {
   if (cap.paper && vaiParaDepois) {
     // Num capítulo de paper não há aula: depois de implementar, vem a ficha do seu próprio paper.
     const n = add('p', '', 'resultado__nota')
-    n.innerHTML = `Você percorreu o método inteiro no paper de ${cap.paper.autores} (${cap.paper.ano}). Agora é a vez de um paper seu: a ficha leva o método para qualquer paper da sua leitura.`
-    botao('Ir para a ficha do seu paper', () => ir(...s))
+    n.textContent = cap.depois?.nota || `Você percorreu o método inteiro no paper de ${cap.paper.autores} (${cap.paper.ano}). Agora é a vez de um paper seu: a ficha leva o método para qualquer paper da sua leitura.`
+    botao(cap.depois?.botao || 'Ir para a ficha do seu paper', () => ir(...s))
   } else if (cap.paper && fimDoCapitulo) {
     add('p', `Você chegou ao fim do Paper ${paperN(cap)}.${s ? '' : ' O próximo paper ainda está sendo preparado.'}`, 'resultado__nota')
     if (s) botao(`Ir para o Paper ${paperN(capSeg)}`, () => ir(...s))
   } else if (cap.paper && noDepois && fimDaLicao && (!s || capSeg !== cap)) {
-    add('p', `A ficha está pronta. Implemente o núcleo com a mesma simplicidade, reproduza o número e escreva sobre a sua pergunta.${s ? ` Quando quiser, o Paper ${paperN(capSeg)} aplica o método a outro tipo de paper.` : ''}`, 'resultado__nota')
+    add('p', `${cap.depois?.fim || 'A ficha está pronta. Implemente o núcleo com a mesma simplicidade, reproduza o número e escreva sobre a sua pergunta.'}${s ? ` O Paper ${paperN(capSeg)} continua daqui.` : ''}`, 'resultado__nota')
     if (s) botao(`Ir para o Paper ${paperN(capSeg)}`, () => ir(...s))
   } else if (vaiParaDepois || fimDoCapitulo) {
     // Entre o capítulo e o que vem depois fica a aula: a pessoa assiste antes de seguir.
@@ -351,7 +351,7 @@ let capDaLista = null
 function desenharLista(cap = capDaLista || capDe(licao)) {
   $('#lista-titulo').textContent = cap.titulo
   $('#lista-intro').innerHTML = cap.paper
-    ? `O método para implementar um paper no estilo do Karpathy, aplicado a <a href="${cap.paper.url}" target="_blank" rel="noopener">${cap.paper.autores} (${cap.paper.ano})</a>. Primeiro ler, depois implementar${parteDepois(cap) ? '; a última parte leva o método para um paper seu' : ''}.`
+    ? `O método para implementar um paper no estilo do Karpathy, aplicado a <a href="${cap.paper.url}" target="_blank" rel="noopener">${cap.paper.autores} (${cap.paper.ano})</a>. Primeiro ler, depois implementar${parteDepois(cap) ? (cap.depois ? `; a última parte, “${parteDepois(cap).titulo}”, é o passo do paper do ICWM que roda numa GPU` : '; a última parte leva o método para um paper seu') : ''}.`
     : `A matemática e a programação para compreender a <a href="${cap.aula}" target="_blank" rel="noopener">aula ${cap.n}</a> de <a href="${CURSO}" target="_blank" rel="noopener">Neural Networks: Zero to Hero</a>, de Andrej Karpathy. Não é preciso saber nada antes. As duas primeiras partes são independentes: comece pela que quiser. Quando há uma parte "Depois da aula", ela é para depois de assistir.`
   $('#lista-licoes').innerHTML = cap.partes.map((parte) => `
     <section class="parte">
