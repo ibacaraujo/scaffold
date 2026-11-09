@@ -126,8 +126,10 @@ export const TRILHA = [
 
 // Depois do curso: papers. No curso, o Karpathy implementa papers aula a aula. Aqui o método continua:
 // ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e
-// fazer uma pergunta que o paper não fez. O Paper 1 ensina o método; os outros são sugestões, e a
-// ficha do fim do Paper 1 serve para qualquer paper escolhido na leitura do dia a dia.
+// fazer uma pergunta que o paper não fez. O Paper 1 ensina o método. Os Papers 2 a 6 seguem uma linha
+// de pesquisa só: a linguagem como andaime do aprendizado (Vygotsky), usada no treino e retirada antes
+// do teste, até chegar a um world model condicionado à ação. Cada um é uma peça da pergunta: a ordem em
+// que a linguagem é retirada importa, sobretudo quando há poucos dados?
 export const PAPERS = [
   {
     n: 10,
@@ -139,51 +141,37 @@ export const PAPERS = [
   },
   {
     n: 11,
-    titulo: 'Um GPT moderno',
-    ref: 'Su et al. (2021), RoFormer; Touvron et al. (2023), LLaMA',
-    url: 'https://arxiv.org/abs/2302.13971',
-    constroi: 'O GPT do curso com as peças de hoje: RoPE, RMSNorm e SwiGLU.',
+    titulo: 'Retirar o raciocínio aos poucos',
+    ref: 'Deng, Choi & Shieber (2024), From Explicit CoT to Implicit CoT: Learning to Internalize CoT Step by Step',
+    url: 'https://arxiv.org/abs/2405.14838',
+    constroi: 'O GPT-2 do curso aprende multiplicação escrevendo os passos, e os passos são tirados alguns por época até ele resolver sem escrevê-los. Comparar sem passos, passos só no treino e passos retirados aos poucos, com 1%, 10% e 100% dos dados.',
   },
   {
     n: 12,
-    titulo: 'Atenção em blocos',
-    ref: 'Dao et al. (2022), FlashAttention',
-    url: 'https://arxiv.org/abs/2205.14135',
-    constroi: 'A mesma atenção, calculada em pedaços, sem guardar a matriz inteira na memória.',
+    titulo: 'Raciocinar no treino, agir sem raciocinar',
+    ref: 'Chen et al. (CoRL 2025), Training Strategies for Efficient Embodied Reasoning (ECoT-Lite)',
+    url: 'https://arxiv.org/abs/2505.08243',
+    constroi: 'Uma política de robô treinada com o raciocínio em texto, que larga o texto na hora de agir (reasoning dropout).',
   },
   {
     n: 13,
-    titulo: 'Ajustar com pouco',
-    ref: 'Hu et al. (2021), LoRA',
-    url: 'https://arxiv.org/abs/2106.09685',
-    constroi: 'Ajustar um modelo treinando só duas matrizes finas: W + BA.',
+    titulo: 'Basta aprender a gerar',
+    ref: 'Lu et al. (2026), TacitVLA: Reasoning Vision-Language-Action Models Without Reasoning Latency',
+    url: 'https://arxiv.org/abs/2610.17540',
+    constroi: 'A mesma política, mudando só a máscara de atenção: a ação nunca olha o raciocínio, e o ganho chega pela representação. A afirmação a testar: a ordem da retirada não importa?',
   },
   {
     n: 14,
-    titulo: 'Aprender com preferências',
-    ref: 'Rafailov et al. (2023), Direct Preference Optimization',
-    url: 'https://arxiv.org/abs/2305.18290',
-    constroi: 'O pós-treino de um modelo a partir de pares de respostas, uma melhor que a outra.',
+    titulo: 'Um world model que planeja',
+    ref: 'Maes, Le Lidec, Scieur, LeCun & Balestriero (2026), LeWorldModel',
+    url: 'https://arxiv.org/abs/2603.19312',
+    constroi: 'Encoder e preditor treinados juntos a partir dos pixels, com o SIGReg contra o colapso, e planejamento por CEM no PushT. É o código onde o experimento roda.',
   },
   {
     n: 15,
-    titulo: 'Imagens como sequências',
-    ref: 'Dosovitskiy et al. (2020), An Image is Worth 16x16 Words',
-    url: 'https://arxiv.org/abs/2010.11929',
-    constroi: 'O Transformer do curso lendo uma imagem cortada em quadradinhos.',
-  },
-  {
-    n: 16,
-    titulo: 'Prever a representação',
-    ref: 'Assran et al. (2023), I-JEPA',
-    url: 'https://arxiv.org/abs/2301.08243',
-    constroi: 'Um modelo que aprende prevendo o que uma parte escondida da imagem representa, não os pixels.',
-  },
-  {
-    n: 17,
-    titulo: 'Abrir o modelo',
-    ref: 'Bricken et al. (2023), Towards Monosemanticity',
-    url: 'https://transformer-circuits.pub/2023/monosemantic-features',
-    constroi: 'Um autoencoder esparso que separa as ativações de um modelo em ideias que dá para ler.',
+    titulo: 'Ações em linguagem',
+    ref: 'Song et al. (2026), LaLa-World: Scaling Latent World Models with Natural Language Actions',
+    url: 'https://arxiv.org/abs/2610.27851',
+    constroi: 'O preditor do world model é um LLM pequeno e as ações viram frases. O número a superar no PushT, medido em sucesso no planejamento, não na perda.',
   },
 ]
