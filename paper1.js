@@ -99,6 +99,13 @@ print("pior tamanho:", pior_N)
 
 const ex = (id, titulo, passo) => ({ id, titulo, passos: [passo] })
 
+// Um trecho do paper, recortado do PDF do arXiv (v1), com o link para a página. Como o Karpathy nas
+// aulas: o paper aberto ao lado do código, na parte exata que está sendo implementada.
+const trecho = (arquivo, onde, pagina, alt) => `<figure class="trecho">
+<a href="papers/kaplan2020/${arquivo}.png" target="_blank" rel="noopener" title="Abrir em tamanho cheio"><img src="papers/kaplan2020/${arquivo}.png" alt="${alt}" loading="lazy"></a>
+<figcaption><span class="trecho__rotulo">No paper</span> · Kaplan et al. (2020), ${onde} · <a href="https://arxiv.org/pdf/2001.08361v1#page=${pagina}" target="_blank" rel="noopener">abrir na página ${pagina}</a></figcaption>
+</figure>`
+
 export const PAPER_1 = {
   n: 10,
   titulo: 'Paper 1',
@@ -125,8 +132,10 @@ export const PAPER_1 = {
                 {
                   texto: `<p>Um paper costuma ter dezenas de páginas, mas a ideia nova cabe em pouco: uma equação, uma camada, uma mudança num código que já existe.</p>
 <p>Esse pedaço é o <strong>núcleo</strong>. O resto do paper serve para mostrar que o núcleo funciona: experimentos, tabelas, comparações.</p>
-<p>No makemore, por exemplo, o paper de Bengio et al. (2003) vira um núcleo de poucas linhas: cada letra ganha um vetor (o embedding), e uma rede pequena lê esses vetores para prever a próxima letra.</p>`,
-                  tarefa: 'O paper de Kaplan et al. (2020) treina centenas de modelos de linguagem de tamanhos diferentes. Qual é o núcleo dele?',
+<p>No makemore, por exemplo, o paper de Bengio et al. (2003) vira um núcleo de poucas linhas: cada letra ganha um vetor (o embedding), e uma rede pequena lê esses vetores para prever a próxima letra.</p>
+<p>O lugar para começar a procurar é o resumo. Este é o do paper de Kaplan et al. (2020):</p>
+${trecho('kaplan-resumo', 'resumo', 1, 'O resumo do paper de Kaplan et al. (2020).')}`,
+                  tarefa: 'O paper treina centenas de modelos de linguagem de tamanhos diferentes. Qual é o núcleo dele?',
                   opcoes: [
                     { t: 'Uma arquitetura nova de Transformer.', por: 'Os modelos do paper são Transformers comuns. A novidade não está na arquitetura.' },
                     { t: 'Um otimizador novo.', por: 'O paper usa o Adam, um otimizador que já existia.' },
@@ -134,7 +143,7 @@ export const PAPER_1 = {
                     { t: 'Um conjunto de dados novo.', por: 'O conjunto de dados é só o lugar do experimento. A descoberta é outra.' },
                   ],
                   erro: 'Procure o que o paper descobriu, não o que ele usou.',
-                  dica: 'O título fala em "scaling laws": leis de escala.',
+                  dica: 'Leia a segunda frase do resumo: "The loss scales as a power-law..."',
                   solucao: 'O núcleo é a lei: a perda cai como uma potência do tamanho do modelo, dos dados e da computação.',
                   certo: 'Às vezes o núcleo é uma relação medida, não um código novo. Implementar esse tipo de paper é refazer a medida.',
                 },
@@ -160,8 +169,9 @@ export const PAPER_1 = {
               porque: 'O núcleo do paper de Kaplan é uma equação curta. Antes de escrever código, vale entender o que ela diz com números na mão.',
               passos: [
                 {
-                  texto: `<p>A equação (1.1) do paper diz como a perda <code>L</code> depende do número de parâmetros <code>N</code>:</p>
-<p style="font-size:1.15em"><code>L(N) = (N<sub>c</sub> / N)<sup>α</sup></code></p>
+                  texto: `<p>A equação (1.1) do paper diz como a perda <code>L</code> depende do número de parâmetros <code>N</code>. Ela está na seção 1.2, que resume as leis do paper:</p>
+${trecho('kaplan-eq1-1', 'seção 1.2, equação (1.1)', 4, 'A equação (1.1): L(N) = (N_c / N) elevado a alfa_N, com alfa_N ≈ 0,076 e N_c ≈ 8,8 × 10^13 parâmetros sem os embeddings.')}
+<p>Em português: <code>L(N) = (N<sub>c</sub> / N)<sup>α</sup></code>, onde o paper escreve <code>α<sub>N</sub></code> para lembrar que é o expoente do tamanho.</p>
 <p>As duas constantes foram medidas no paper: <code>α ≈ 0,076</code> e <code>N<sub>c</sub> ≈ 8,8 × 10<sup>13</sup></code>. A perda é a mesma da aula do makemore: a entropia cruzada, medida em nats por token.</p>
 <p>Uma conta assim, com o tamanho elevado a um expoente, se chama <strong>lei de potência</strong>.</p>`,
                   tarefa: 'Qual é a perda prevista para um modelo de 1 bilhão de parâmetros (N = 10<sup>9</sup>)? Use uma calculadora, com duas casas decimais.',
@@ -179,6 +189,8 @@ export const PAPER_1 = {
                   dica: 'Fica um pouco abaixo de 1.',
                   solucao: '2 ^ (−0,076) ≈ 0,949\nDobrar o modelo tira cerca de 5% da perda.',
                   certo: 'Cada vez que o modelo dobra, a perda cai uns 5%. É pouco a cada passo, mas vale para todos os tamanhos que o paper mediu.',
+                  confira: `<p>O paper faz a mesma conta na página 5, entre a quinta e a sexta linha:</p>
+${trecho('kaplan-dobrar', 'seção 1.2', 5, 'Trecho do paper: dobrar o número de parâmetros dá uma perda menor por um fator 2 elevado a menos alfa_N, igual a 0,95.')}`,
                 },
                 {
                   texto: `<p>A mesma conta, ao contrário: quanto o modelo precisa crescer para a perda cair 10%?</p>
@@ -199,7 +211,9 @@ export const PAPER_1 = {
                 {
                   texto: `<p>Tire o logaritmo dos dois lados de <code>L = (N<sub>c</sub> / N)<sup>α</sup></code>:</p>
 <p><code>log L = α · log N<sub>c</sub> − α · log N</code></p>
-<p>Com <code>x = log N</code> e <code>y = log L</code>, isso é <code>y = (α · log N<sub>c</sub>) − α · x</code>: a equação de uma reta.</p>`,
+<p>Com <code>x = log N</code> e <code>y = log L</code>, isso é <code>y = (α · log N<sub>c</sub>) − α · x</code>: a equação de uma reta.</p>
+<p>É por isso que a Figura 1, a principal do paper, tem as duas escalas em logaritmo. No painel da direita (Parameters), os pontos de <code>L(N)</code> caem numa reta, e a legenda traz a própria equação (1.1):</p>
+${trecho('kaplan-fig1', 'Figura 1', 3, 'A Figura 1 do paper: três gráficos log-log da perda no teste contra a computação, o tamanho dos dados e o número de parâmetros. Nos três, os pontos formam uma reta.')}`,
                   tarefa: 'Num gráfico de log L contra log N, qual é a inclinação da reta do paper?',
                   campos: [{ rotulo: 'inclinação =', resposta: -0.076, tol: 0.0005 }],
                   erro: 'A inclinação é o número que multiplica x. Repare no sinal.',
@@ -320,7 +334,8 @@ if not perdas[-1] < perdas[0] / 10:
               passos: [
                 {
                   texto: `<p>Com as perdas medidas, ajuste a reta em <code>log N</code> contra <code>log perda</code>, como no passo de conferir a ferramenta.</p>
-<p>O gráfico já vem pronto, com as duas escalas em logaritmo.</p>`,
+<p>O alvo é o painel da direita da Figura 1. O gráfico do seu código já vem pronto, com as duas escalas em logaritmo, para comparar com ele.</p>
+${trecho('kaplan-fig1', 'Figura 1', 3, 'A Figura 1 do paper, com o painel da perda contra o número de parâmetros à direita.')}`,
                   tarefa: 'Guarde em <code>alfa</code> o expoente medido no seu experimento.',
                   inicio: EXPERIMENTO + MEDIR + `
 inclinacao, intercepto = np.polyfit(np.log(Ns), np.log(perdas), 1)
@@ -397,7 +412,7 @@ if not (v > 0.6).all():
                 {
                   texto: `<p>A pergunta: <strong>o que acontece com a lei quando os dados são poucos?</strong></p>
 <p>O paper responde com outra equação, a (1.5), que junta o tamanho <code>N</code> e a quantidade de dados <code>D</code>:</p>
-<p><code>L(N, D) = [(N<sub>c</sub> / N)<sup>α<sub>N</sub> / α<sub>D</sub></sup> + D<sub>c</sub> / D]<sup>α<sub>D</sub></sup></code></p>
+${trecho('kaplan-eq1-5', 'seção 1.2, equação (1.5)', 5, 'A equação (1.5): L(N, D) é a soma de (N_c / N) elevado a alfa_N sobre alfa_D com D_c / D, tudo elevado a alfa_D.')}
 <p>Quando <code>N</code> cresce muito, o primeiro termo some e sobra <code>(D<sub>c</sub> / D)<sup>α<sub>D</sub></sup></code>: um <strong>piso</strong> que só depende dos dados. Aqui você vê esse piso com o experimento: o mesmo modelo, com só 100 exemplos de treino em vez de 3 000, e um tamanho a mais (256) para enxergar o fim da curva.</p>`,
                   tarefa: 'Guarde em <code>perdas_poucos</code> a perda de cada tamanho treinando só com os 100 primeiros exemplos. As perdas com todos os dados já estão em <code>perdas_muitos</code>.',
                   inicio: EXPERIMENTO + `${ABL_INICIO}perdas_poucos = []
@@ -415,6 +430,8 @@ if not perdas_poucos[-1] > 0.9 * perdas_poucos[-2]:
     falha('Com 100 exemplos, dobrar de 128 para 256 quase não devia ajudar. Confira se usou [:100] em X e em y.')
 `,
                   certo: 'Com 3000 exemplos, as inclinações locais ficam perto de 1 e só começam a cair no último par, em 256: até 3000 exemplos têm limite. Com 100, elas encolhem até quase zero: a curva deita e encosta num piso, e dobrar o modelo deixa de ajudar. É o que a equação (1.5) prevê. Repare que um expoente só, ajustado na curva inteira, esconderia isso: ele daria um número no meio do caminho. Anos depois, Hoffmann et al. (2022), o paper do Chinchilla, refizeram as medidas de Kaplan com mais cuidado (o ponto principal foi ajustar o learning rate à duração de cada treino) e mudaram a conclusão de quanto dado usar para cada tamanho de modelo. Reproduzir também é o jeito de achar onde um paper erra.',
+                  confira: `<p>Compare o seu gráfico com o da esquerda na Figura 9 do paper. Lá, cada cor é uma quantidade de dados: a amarela, com mais dados, é uma reta; as escuras, com poucos, deitam e encostam num piso.</p>
+${trecho('kaplan-fig9', 'Figura 9', 11, 'A Figura 9 do paper. À esquerda, a perda contra o tamanho do modelo para várias quantidades de dados: com muitos dados é uma reta, com poucos a curva para de cair.')}`,
                 },
               ],
             },
@@ -424,7 +441,9 @@ if not perdas_poucos[-1] > 0.9 * perdas_poucos[-2]:
               porque: 'Um bom experimento pequeno às vezes mostra algo que o paper não mostra. Aqui, a pergunta é sobre uma escolha do próprio código: por que o modelo usa reg=0.1?',
               passos: [
                 {
-                  texto: `<p>O <code>treinar</code> resolve os mínimos quadrados com uma regularização pequena, <code>reg=0.1</code>. O paper de Kaplan faz algo parecido de outro jeito: com poucos dados, ele para o treino quando a perda no teste para de cair (o <em>early stopping</em>).</p>
+                  texto: `<p>O <code>treinar</code> resolve os mínimos quadrados com uma regularização pequena, <code>reg=0.1</code>. O paper de Kaplan faz algo parecido de outro jeito. Está numa frase da seção 4.2, logo abaixo da Figura 9:</p>
+${trecho('kaplan-early-stopping', 'seção 4.2', 11, 'Trecho do paper: todos os modelos são regularizados com 10% de dropout, e o treino para quando a perda no teste deixa de cair.')}
+<p>Dropout de 10% e parar o treino quando a perda no teste deixa de cair (o <em>early stopping</em>): duas regularizações. Uma frase dessas passa fácil numa leitura, e o experimento abaixo mostra por que ela importa.</p>
 <p>Para entender por que, tire a regularização e treine com só 100 exemplos, agora com muitos tamanhos perto de 100. Num modelo com exatamente 100 parâmetros que aprendem, há uma solução que passa por cada um dos 100 pontos de treino, e ela é a única.</p>`,
                   tarefa: 'Guarde em <code>pior_N</code> o tamanho de <code>Ns_finos</code> com a maior perda no teste.',
                   inicio: EXPERIMENTO + `${PICO_INICIO}
@@ -441,7 +460,7 @@ if pior_N == 0:
 if int(pior_N) != Ns_finos[int(np.argmax(perdas))]:
     falha('pior_N devia ser o tamanho com a maior perda, não a posição dele na lista.')
 `,
-                  certo: 'O pior modelo tem 100 neurônios, o mesmo número de exemplos de treino. Para passar exatamente por cada ponto, ele precisa de pesos enormes, e entre os pontos a função fica louca. Com menos neurônios, ele não consegue decorar; com mais, há muitas soluções e os mínimos quadrados escolhem a mais suave. A perda sobe e depois desce de novo: é a <strong>dupla descida</strong> (double descent), estudada por Belkin et al. (2019) e por Nakkiran et al. (2019) em redes profundas. A regularização e o early stopping apagam o pico. Sem eles, a reta log-log do paper não apareceria com poucos dados.',
+                  certo: 'O pior modelo tem 100 neurônios, o mesmo número de exemplos de treino. Para passar exatamente por cada ponto, ele precisa de pesos enormes, e entre os pontos a função fica louca. Com menos neurônios, ele não consegue decorar; com mais, há muitas soluções e os mínimos quadrados escolhem a mais suave. A perda sobe e depois desce de novo: é a dupla descida (double descent), estudada por Belkin et al. (2019) e por Nakkiran et al. (2019) em redes profundas. A regularização e o early stopping apagam o pico. Sem eles, a reta log-log do paper não apareceria com poucos dados.',
                 },
               ],
             },

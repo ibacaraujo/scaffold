@@ -239,6 +239,8 @@ function mostrarResultado(box, tipo, msg, tecnico) {
   const fimDaLicao = passoI === licao.passos.length - 1
   add('p', 'Certo.', 'resultado__t')
   if (passo().certo) add('p', passo().certo, 'resultado__nota')
+  // Num capítulo de paper, a resposta certa pode abrir o trecho do paper que diz a mesma coisa.
+  if (passo().confira) add('div', '', 'resultado__paper').innerHTML = passo().confira
   const s = seguinte()
   const cap = capDe(licao), noDepois = parteDe(licao).id === 'depois'
   const capSeg = s && capDe(s[0])
