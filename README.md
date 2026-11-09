@@ -12,5 +12,5 @@ Para rodar localmente: `python3 -m http.server` nesta pasta.
 
 No curso, o Karpathy implementa papers aula a aula. A trilha de papers continua esse método por conta própria: ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e fazer uma pergunta que o paper não fez.
 
-O Paper 1 (`paper1.js`) ensina o método com Kaplan et al. (2020), *Scaling Laws for Neural Language Models*: ler a equação, conferir o ajuste log-log num caso com resposta conhecida, refazer a reta da Figura 1 com um modelo pequeno que roda no navegador e medir o que muda com poucos dados. A última parte é uma ficha para aplicar o método a qualquer paper. Os próximos papers sugeridos estão em `PAPERS`, em `trilha.js`.
+O Paper 1 (`paper1.js`) ensina o método com Kaplan et al. (2020), *Scaling Laws for Neural Language Models*: ler a equação, conferir o ajuste log-log num caso com resposta conhecida, refazer a reta da Figura 1 com um modelo pequeno que roda no navegador, conferir se ela é mesmo uma reta (as inclinações locais), ver a curva encostar num piso com poucos dados (a equação 1.5) e achar o pico da dupla descida quando se tira a regularização. A última parte é uma ficha para aplicar o método a qualquer paper. Os próximos papers sugeridos estão em `PAPERS`, em `trilha.js`.
 

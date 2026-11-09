@@ -135,7 +135,7 @@ export const PAPERS = [
     titulo: 'Leis de escala',
     ref: 'Kaplan et al. (2020), Scaling Laws for Neural Language Models',
     url: 'https://arxiv.org/abs/2001.08361',
-    constroi: 'O método inteiro num paper só: ler a equação, medir o expoente, refazer a reta da Figura 1 e uma pergunta própria.',
+    constroi: 'O método inteiro num paper só: ler a equação, medir o expoente, refazer a reta da Figura 1, ver onde ela entorta com poucos dados e o pico que a regularização esconde.',
   },
   {
     n: 11,

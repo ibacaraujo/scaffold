@@ -8,7 +8,8 @@
 // As constantes usadas aqui são as da equação (1.1) do paper: alfa_N ≈ 0,076 e N_c ≈ 8,8 × 10^13
 // parâmetros (sem contar os embeddings). O experimento roda no navegador: um modelo pequeno, de
 // features aleatórias, em vez de um Transformer. Ele reproduz a forma da lei (uma reta no gráfico
-// log-log), não o número 0,076.
+// log-log), não o número 0,076. A regularização do modelo (reg=0.1) faz o papel do early stopping do
+// paper; a última lição de código a tira e mostra o pico da dupla descida, em N = número de exemplos.
 
 // O experimento dos três últimos passos de código. Cada passo roda sozinho, então cada um traz tudo.
 const EXPERIMENTO = `import numpy as np
@@ -30,12 +31,13 @@ X_teste, y_teste = dados(1000, 2)
 
 # O modelo de tamanho N: N neurônios ReLU com pesos sorteados e fixos.
 # Só a última camada aprende, e ela tem solução exata (mínimos quadrados).
-def treinar(N, X, y, semente=0):
+# O reg é uma regularização pequena, que faz o papel do early stopping do paper.
+def treinar(N, X, y, semente=0, reg=0.1):
     r = np.random.default_rng(100 + semente)
     W = r.normal(0, 1, (3, N))
     b = r.normal(0, 1, N)
     F = np.maximum(0, X @ W + b)
-    c = np.linalg.solve(F.T @ F + 1e-6 * np.eye(N), F.T @ y)
+    c = np.linalg.solve(F.T @ F + reg * np.eye(N), F.T @ y)
     return W, b, c
 
 def perda(modelo, X, y):
@@ -43,14 +45,56 @@ def perda(modelo, X, y):
     erro = np.maximum(0, X @ W + b) @ c - y
     return np.mean(erro ** 2) / np.var(y)
 
-def perda_media(N, X, y):
+def perda_media(N, X, y, reg=0.1):
     # A média de 3 sorteios, para a curva não depender da sorte de um só.
-    return np.mean([perda(treinar(N, X, y, s), X_teste, y_teste) for s in range(3)])
+    return np.mean([perda(treinar(N, X, y, s, reg), X_teste, y_teste) for s in range(3)])
 
 Ns = [4, 8, 16, 32, 64, 128]
 `
 
 const MEDIR = `perdas = [perda_media(N, X_treino, y_treino) for N in Ns]
+`
+
+// A pergunta própria: as mesmas perdas com 100 exemplos, e um tamanho a mais para ver o fim da curva.
+const ABL_INICIO = `
+Ns = [4, 8, 16, 32, 64, 128, 256]
+perdas_muitos = [perda_media(N, X_treino, y_treino) for N in Ns]
+`
+
+const ABL_FIM = `
+import matplotlib.pyplot as plt
+plt.figure(figsize=(5, 3.4))
+plt.loglog(Ns, perdas_muitos, "o-", label="3000 exemplos")
+if perdas_poucos:
+    plt.loglog(Ns, perdas_poucos, "s-", label="100 exemplos")
+plt.xlabel("N (tamanho do modelo)")
+plt.ylabel("perda no teste")
+plt.legend()
+
+def inclinacoes(perdas):
+    p = np.array(perdas)
+    return np.round(-np.log(p[1:] / p[:-1]) / np.log(2), 2)
+
+print("inclinações locais, 3000 exemplos:", inclinacoes(perdas_muitos))
+print("inclinações locais, 100 exemplos: ", inclinacoes(perdas_poucos))
+`
+
+// O pico: sem regularização, com 100 exemplos e muitos tamanhos perto de 100.
+const PICO_INICIO = `
+# Sem regularização: reg quase zero. Só 100 exemplos de treino.
+Ns_finos = [40, 60, 80, 90, 95, 100, 105, 110, 120, 140, 160, 200]
+perdas = [perda_media(N, X_treino[:100], y_treino[:100], reg=1e-6) for N in Ns_finos]
+`
+
+const PICO_FIM = `
+import matplotlib.pyplot as plt
+plt.figure(figsize=(5, 3.4))
+plt.plot(Ns_finos, perdas, "o-")
+plt.axvline(100, color="gray", ls=":", label="N = número de exemplos")
+plt.xlabel("N (tamanho do modelo)")
+plt.ylabel("perda no teste")
+plt.legend()
+print("pior tamanho:", pior_N)
 `
 
 const ex = (id, titulo, passo) => ({ id, titulo, passos: [passo] })
@@ -310,7 +354,38 @@ tem('alfa')
 if not 0.8 < float(alfa) < 1.4:
     falha('O expoente devia ficar perto de 1,1. Confira o sinal da inclinação.')
 `,
-                  certo: 'Os pontos caem sobre a reta: a forma da lei se reproduziu. O expoente é outro (perto de 1,1, não 0,076) porque a tarefa e o modelo são outros. O paper também mede expoentes diferentes para coisas diferentes: 0,076 para o tamanho e 0,095 para os dados.',
+                  certo: 'Os pontos parecem cair sobre a reta. O expoente é outro (perto de 1,1, não 0,076) porque a tarefa e o modelo são outros. O paper também mede expoentes diferentes para coisas diferentes: 0,076 para o tamanho e 0,095 para os dados.',
+                },
+                {
+                  texto: `<p>Um ajuste de reta sempre devolve um número, mesmo quando os pontos fazem curva. Antes de acreditar no expoente, confira se a reta é mesmo uma reta.</p>
+<p>Como cada tamanho é o dobro do anterior, dá para medir a inclinação entre cada par de vizinhos: quanto a perda cai, em escala log, quando o modelo dobra. Isso é a <strong>inclinação local</strong>:</p>
+<p><code>−log(L<sub>2N</sub> / L<sub>N</sub>) / log 2</code></p>
+<p>Numa lei de potência, todas as inclinações locais dão o mesmo número. Se elas encolhem pelo caminho, a curva está deitando, e um expoente só não descreve os dados.</p>`,
+                  tarefa: 'Guarde em <code>locais</code> as 5 inclinações locais, uma para cada par de tamanhos vizinhos.',
+                  inicio: EXPERIMENTO + MEDIR + `
+p = np.array(perdas)
+locais = []
+
+print("inclinações locais:", np.round(locais, 2))
+`,
+                  dica: '<code>p[1:] / p[:-1]</code> divide cada perda pela anterior. Então <code>locais = -np.log(p[1:] / p[:-1]) / np.log(2)</code>.',
+                  solucao: EXPERIMENTO + MEDIR + `
+p = np.array(perdas)
+locais = -np.log(p[1:] / p[:-1]) / np.log(2)
+
+print("inclinações locais:", np.round(locais, 2))
+`,
+                  checagem: `
+tem('locais')
+v = np.asarray(locais, float)
+if v.shape != (5,):
+    falha('Devia haver 5 inclinações: uma para cada par de vizinhos entre os 6 tamanhos.')
+if not perto(float(v[0]), float(-np.log(perdas[1] / perdas[0]) / np.log(2)), 1e-6):
+    falha('A primeira inclinação devia comparar o tamanho 8 com o 4. Confira a conta.')
+if not (v > 0.6).all():
+    falha('Todas as inclinações deviam ser positivas e perto de 1. Confira o sinal.')
+`,
+                  certo: 'As inclinações oscilam em volta de 1,1, sem encolher: com dados de sobra, a reta é de verdade. Os papers de leis de escala fazem a mesma conferência. Na próxima lição, ela vai mostrar uma curva que deita.',
                 },
               ],
             },
@@ -321,41 +396,52 @@ if not 0.8 < float(alfa) < 1.4:
               passos: [
                 {
                   texto: `<p>A pergunta: <strong>o que acontece com a lei quando os dados são poucos?</strong></p>
-<p>O paper responde com outra equação, a (1.5), que junta o tamanho e os dados. Aqui você responde com o experimento: o mesmo modelo, com só 100 exemplos de treino em vez de 3 000.</p>`,
-                  tarefa: 'Meça o expoente com os 100 primeiros exemplos e guarde em <code>alfa_poucos</code>. O expoente com todos os dados já está em <code>alfa_muitos</code>.',
-                  inicio: EXPERIMENTO + `
-def medir_alfa(X, y):
-    perdas = [perda_media(N, X, y) for N in Ns]
-    inclinacao, _ = np.polyfit(np.log(Ns), np.log(perdas), 1)
-    return -inclinacao
-
-alfa_muitos = medir_alfa(X_treino, y_treino)
-alfa_poucos = 0
-
-print("com 3000 exemplos:", round(alfa_muitos, 2))
-print("com 100 exemplos: ", round(alfa_poucos, 2))
-`,
-                  dica: 'Os 100 primeiros exemplos são <code>X_treino[:100]</code> e <code>y_treino[:100]</code>. Passe os dois para <code>medir_alfa</code>.',
-                  solucao: EXPERIMENTO + `
-def medir_alfa(X, y):
-    perdas = [perda_media(N, X, y) for N in Ns]
-    inclinacao, _ = np.polyfit(np.log(Ns), np.log(perdas), 1)
-    return -inclinacao
-
-alfa_muitos = medir_alfa(X_treino, y_treino)
-alfa_poucos = medir_alfa(X_treino[:100], y_treino[:100])
-
-print("com 3000 exemplos:", round(alfa_muitos, 2))
-print("com 100 exemplos: ", round(alfa_poucos, 2))
-`,
+<p>O paper responde com outra equação, a (1.5), que junta o tamanho <code>N</code> e a quantidade de dados <code>D</code>:</p>
+<p><code>L(N, D) = [(N<sub>c</sub> / N)<sup>α<sub>N</sub> / α<sub>D</sub></sup> + D<sub>c</sub> / D]<sup>α<sub>D</sub></sup></code></p>
+<p>Quando <code>N</code> cresce muito, o primeiro termo some e sobra <code>(D<sub>c</sub> / D)<sup>α<sub>D</sub></sup></code>: um <strong>piso</strong> que só depende dos dados. Aqui você vê esse piso com o experimento: o mesmo modelo, com só 100 exemplos de treino em vez de 3 000, e um tamanho a mais (256) para enxergar o fim da curva.</p>`,
+                  tarefa: 'Guarde em <code>perdas_poucos</code> a perda de cada tamanho treinando só com os 100 primeiros exemplos. As perdas com todos os dados já estão em <code>perdas_muitos</code>.',
+                  inicio: EXPERIMENTO + `${ABL_INICIO}perdas_poucos = []
+${ABL_FIM}`,
+                  dica: 'Os 100 primeiros exemplos são <code>X_treino[:100]</code> e <code>y_treino[:100]</code>. Use a mesma linha de <code>perdas_muitos</code>, trocando os dados.',
+                  solucao: EXPERIMENTO + `${ABL_INICIO}perdas_poucos = [perda_media(N, X_treino[:100], y_treino[:100]) for N in Ns]
+${ABL_FIM}`,
                   checagem: `
-tem('alfa_poucos'); tem('alfa_muitos')
-if float(alfa_poucos) == 0:
-    falha('alfa_poucos ainda é 0. Meça com os 100 primeiros exemplos.')
-if not float(alfa_poucos) < float(alfa_muitos) - 0.15:
-    falha('Com 100 exemplos, o expoente devia ficar menor. Confira se usou [:100] em X e em y.')
+tem('perdas_poucos'); tem('perdas_muitos')
+if len(perdas_poucos) != len(Ns):
+    falha('Devia haver uma perda para cada tamanho: ' + str(len(Ns)) + ' ao todo.')
+if not perdas_poucos[-1] > 2 * perdas_muitos[-1]:
+    falha('Com 100 exemplos, o maior modelo devia ficar bem pior do que com 3000. Confira se usou [:100] em X e em y.')
+if not perdas_poucos[-1] > 0.9 * perdas_poucos[-2]:
+    falha('Com 100 exemplos, dobrar de 128 para 256 quase não devia ajudar. Confira se usou [:100] em X e em y.')
 `,
-                  certo: 'Com poucos dados, a reta fica mais deitada: dobrar o modelo ajuda menos, porque agora os dados limitam. É o que a equação (1.5) do paper descreve. Anos depois, Hoffmann et al. (2022), o paper do Chinchilla, refizeram essas medidas com mais cuidado e mudaram a conclusão de quanto dado usar para cada tamanho de modelo. Reproduzir também é o jeito de achar onde um paper erra.',
+                  certo: 'Com 3000 exemplos, as inclinações locais ficam perto de 1 e só começam a cair no último par, em 256: até 3000 exemplos têm limite. Com 100, elas encolhem até quase zero: a curva deita e encosta num piso, e dobrar o modelo deixa de ajudar. É o que a equação (1.5) prevê. Repare que um expoente só, ajustado na curva inteira, esconderia isso: ele daria um número no meio do caminho. Anos depois, Hoffmann et al. (2022), o paper do Chinchilla, refizeram as medidas de Kaplan com mais cuidado (o ponto principal foi ajustar o learning rate à duração de cada treino) e mudaram a conclusão de quanto dado usar para cada tamanho de modelo. Reproduzir também é o jeito de achar onde um paper erra.',
+                },
+              ],
+            },
+            {
+              id: 'p1-pico',
+              titulo: 'O que a regularização esconde',
+              porque: 'Um bom experimento pequeno às vezes mostra algo que o paper não mostra. Aqui, a pergunta é sobre uma escolha do próprio código: por que o modelo usa reg=0.1?',
+              passos: [
+                {
+                  texto: `<p>O <code>treinar</code> resolve os mínimos quadrados com uma regularização pequena, <code>reg=0.1</code>. O paper de Kaplan faz algo parecido de outro jeito: com poucos dados, ele para o treino quando a perda no teste para de cair (o <em>early stopping</em>).</p>
+<p>Para entender por que, tire a regularização e treine com só 100 exemplos, agora com muitos tamanhos perto de 100. Num modelo com exatamente 100 parâmetros que aprendem, há uma solução que passa por cada um dos 100 pontos de treino, e ela é a única.</p>`,
+                  tarefa: 'Guarde em <code>pior_N</code> o tamanho de <code>Ns_finos</code> com a maior perda no teste.',
+                  inicio: EXPERIMENTO + `${PICO_INICIO}
+pior_N = 0
+${PICO_FIM}`,
+                  dica: '<code>np.argmax(perdas)</code> devolve a posição da maior perda. Então <code>pior_N = Ns_finos[np.argmax(perdas)]</code>.',
+                  solucao: EXPERIMENTO + `${PICO_INICIO}
+pior_N = Ns_finos[np.argmax(perdas)]
+${PICO_FIM}`,
+                  checagem: `
+tem('pior_N')
+if pior_N == 0:
+    falha('pior_N ainda é 0. Procure o tamanho com a maior perda.')
+if int(pior_N) != Ns_finos[int(np.argmax(perdas))]:
+    falha('pior_N devia ser o tamanho com a maior perda, não a posição dele na lista.')
+`,
+                  certo: 'O pior modelo tem 100 neurônios, o mesmo número de exemplos de treino. Para passar exatamente por cada ponto, ele precisa de pesos enormes, e entre os pontos a função fica louca. Com menos neurônios, ele não consegue decorar; com mais, há muitas soluções e os mínimos quadrados escolhem a mais suave. A perda sobe e depois desce de novo: é a <strong>dupla descida</strong> (double descent), estudada por Belkin et al. (2019) e por Nakkiran et al. (2019) em redes profundas. A regularização e o early stopping apagam o pico. Sem eles, a reta log-log do paper não apareceria com poucos dados.',
                 },
               ],
             },
