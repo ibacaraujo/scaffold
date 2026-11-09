@@ -254,7 +254,7 @@ function mostrarResultado(box, tipo, msg, tecnico) {
     n.innerHTML = `Você percorreu o método inteiro no paper de ${cap.paper.autores} (${cap.paper.ano}). Agora é a vez de um paper seu: a ficha leva o método para qualquer paper da sua leitura.`
     botao('Ir para a ficha do seu paper', () => ir(...s))
   } else if (cap.paper && fimDoCapitulo) {
-    add('p', `Você chegou ao fim do Paper ${paperN(cap)}.${s ? '' : ' O próximo paper ainda está sendo preparado; a ficha do Paper 1 serve para qualquer paper que você escolher.'}`, 'resultado__nota')
+    add('p', `Você chegou ao fim do Paper ${paperN(cap)}.${s ? '' : ' O próximo paper ainda está sendo preparado.'}`, 'resultado__nota')
     if (s) botao(`Ir para o Paper ${paperN(capSeg)}`, () => ir(...s))
   } else if (cap.paper && noDepois && fimDaLicao && (!s || capSeg !== cap)) {
     add('p', `A ficha está pronta. Implemente o núcleo com a mesma simplicidade, reproduza o número e escreva sobre a sua pergunta.${s ? ` Quando quiser, o Paper ${paperN(capSeg)} aplica o método a outro tipo de paper.` : ''}`, 'resultado__nota')
