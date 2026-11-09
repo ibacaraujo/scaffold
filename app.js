@@ -1,6 +1,6 @@
 import { CAPITULOS } from './licoes.js'
 import { montarFigura } from './figuras.js'
-import { TRILHA, CURSO, PAPERS } from './trilha.js'
+import { TRILHA, CURSO, PAPERS, MARCOS } from './trilha.js'
 
 const $ = (s) => document.querySelector(s)
 const licoesDa = (parte) => parte.modulos.flatMap((m) => m.licoes)
@@ -247,13 +247,18 @@ function mostrarResultado(box, tipo, msg, tecnico) {
   const botao = (texto, aoClicar) => { const b = add('button', texto, 'botao'); b.id = 'avancar'; b.type = 'button'; b.onclick = aoClicar; return b }
   const vaiParaDepois = s && !noDepois && parteDe(s[0]).id === 'depois'
   const fimDoCapitulo = !noDepois && fimDaLicao && (!s || capSeg !== cap)
-  if (cap.paper && (vaiParaDepois || fimDoCapitulo)) {
+  const paperN = (c) => c.n - 9
+  if (cap.paper && vaiParaDepois) {
     // Num capítulo de paper não há aula: depois de implementar, vem a ficha do seu próprio paper.
     const n = add('p', '', 'resultado__nota')
     n.innerHTML = `Você percorreu o método inteiro no paper de ${cap.paper.autores} (${cap.paper.ano}). Agora é a vez de um paper seu: a ficha leva o método para qualquer paper da sua leitura.`
-    if (s) botao('Ir para a ficha do seu paper', () => ir(...s))
-  } else if (cap.paper && noDepois && fimDaLicao && !s) {
-    add('p', 'A ficha está pronta. Implemente o núcleo com a mesma simplicidade, reproduza o número e escreva sobre a sua pergunta.', 'resultado__nota')
+    botao('Ir para a ficha do seu paper', () => ir(...s))
+  } else if (cap.paper && fimDoCapitulo) {
+    add('p', `Você chegou ao fim do Paper ${paperN(cap)}.${s ? '' : ' O próximo paper ainda está sendo preparado; a ficha do Paper 1 serve para qualquer paper que você escolher.'}`, 'resultado__nota')
+    if (s) botao(`Ir para o Paper ${paperN(capSeg)}`, () => ir(...s))
+  } else if (cap.paper && noDepois && fimDaLicao && (!s || capSeg !== cap)) {
+    add('p', `A ficha está pronta. Implemente o núcleo com a mesma simplicidade, reproduza o número e escreva sobre a sua pergunta.${s ? ` Quando quiser, o Paper ${paperN(capSeg)} aplica o método a outro tipo de paper.` : ''}`, 'resultado__nota')
+    if (s) botao(`Ir para o Paper ${paperN(capSeg)}`, () => ir(...s))
   } else if (vaiParaDepois || fimDoCapitulo) {
     // Entre o capítulo e o que vem depois fica a aula: a pessoa assiste antes de seguir.
     const n = add('p', '', 'resultado__nota')
@@ -346,7 +351,7 @@ let capDaLista = null
 function desenharLista(cap = capDaLista || capDe(licao)) {
   $('#lista-titulo').textContent = cap.titulo
   $('#lista-intro').innerHTML = cap.paper
-    ? `O método para implementar um paper no estilo do Karpathy, aplicado a <a href="${cap.paper.url}" target="_blank" rel="noopener">${cap.paper.autores} (${cap.paper.ano})</a>. Primeiro ler, depois implementar; a última parte leva o método para um paper seu.`
+    ? `O método para implementar um paper no estilo do Karpathy, aplicado a <a href="${cap.paper.url}" target="_blank" rel="noopener">${cap.paper.autores} (${cap.paper.ano})</a>. Primeiro ler, depois implementar${parteDepois(cap) ? '; a última parte leva o método para um paper seu' : ''}.`
     : `A matemática e a programação para compreender a <a href="${cap.aula}" target="_blank" rel="noopener">aula ${cap.n}</a> de <a href="${CURSO}" target="_blank" rel="noopener">Neural Networks: Zero to Hero</a>, de Andrej Karpathy. Não é preciso saber nada antes. As duas primeiras partes são independentes: comece pela que quiser. Quando há uma parte "Depois da aula", ela é para depois de assistir.`
   $('#lista-licoes').innerHTML = cap.partes.map((parte) => `
     <section class="parte">
@@ -490,7 +495,20 @@ function cartaoPaper(p) {
       </div>
     </article>`
 }
+function desenharTempo() {
+  const nome = (n) => `Paper ${n - 9}`
+  $('#tempo').innerHTML = MARCOS.map((m) => {
+    const p = m.paper && PAPERS.find((x) => x.n === m.paper)
+    const onde = p ? `<span class="tempo__onde${p.pronto ? ' tempo__onde--pronto' : ''}">${nome(p.n)}${p.pronto ? '' : ', em breve'}</span>` : `<span class="tempo__onde tempo__onde--leitura">${m.onde}</span>`
+    return `
+      <li class="tempo__item${m.marco ? ' tempo__item--marco' : ''}">
+        <span class="tempo__ano">${m.data}</span>
+        <div><a href="${m.url}" target="_blank" rel="noopener">${m.ref}</a> ${onde}<p class="tempo__nota">${m.nota}</p></div>
+      </li>`
+  }).join('')
+}
 function desenharPapers() {
+  desenharTempo()
   $('#linha-papers').innerHTML = PAPERS.map((p) => {
     const ok = p.pronto && feito(capN(p.n).partes.flatMap(licoesDa))
     return `
