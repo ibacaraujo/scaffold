@@ -10,7 +10,6 @@ Para rodar localmente: `python3 -m http.server` nesta pasta.
 
 ## Depois do curso: papers
 
-No curso, o Karpathy implementa papers aula a aula. A trilha de papers continua esse método por conta própria: ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e fazer uma pergunta que o paper não fez.
+No curso, o Karpathy implementa papers aula a aula. A trilha de papers continua esse método por conta própria (ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e fazer uma pergunta que o paper não fez) e é a trilha da pesquisa: cada paper é uma peça do paper do ICWM.
 
-O Paper 1 (`paper1.js`) ensina o método com Kaplan et al. (2020), *Scaling Laws for Neural Language Models*: ler a equação, conferir o ajuste log-log num caso com resposta conhecida, refazer a reta da Figura 1 com um modelo pequeno que roda no navegador e medir o que muda com poucos dados. A última parte é uma ficha para aplicar o método a qualquer paper. Os próximos papers sugeridos estão em `PAPERS`, em `trilha.js`.
-
+O Paper 1 é a LeWorldModel (Maes et al., 2026), a base e o código onde o experimento roda, com o número do PushT reproduzido em poucos episódios. O Paper 2 é o Language-Forcing (Li et al., 2026), o paper a superar, transplantado para dentro da LeWorldModel. Os dois estão em `PAPERS`, em `trilha.js`; as leituras que entram no paper sem virar capítulo (Coconut, ECoT-Lite, TacitVLA, Deng et al. e Grounding Spatial Relations) estão em `MARCOS`.

@@ -55,6 +55,12 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
 .texto p { margin: 0 0 14px; }
 .texto ul { margin: 0 0 14px; padding-left: 22px; }
 .texto li { margin-bottom: 6px; }
+.trecho { margin: 6px 0 18px; border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; background: #fff; }
+.trecho img { display: block; width: 100%; height: auto; cursor: zoom-in; }
+.trecho figcaption { padding: 8px 14px; font-size: 14px; line-height: 1.4; color: var(--mute); background: var(--bg-2); border-top: 1px solid var(--rule); }
+.trecho__rotulo { font-weight: 600; color: var(--fg-2); }
+.resultado__paper { margin-top: 14px; }
+.resultado__paper p { margin: 0 0 8px; }
 .tarefa { margin-top: 24px; padding: 18px 20px; background: var(--bg-2); border-radius: 12px; }
 .tarefa h2 { margin: 0 0 6px; font-size: .86em; font-weight: 600; color: var(--sky); }
 .tarefa p { margin: 0; color: var(--fg); }
@@ -278,6 +284,17 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
 .paper__ref { margin: -6px 0 10px; font-size: 14px; }
 .paper__ref a { color: var(--mute); }
 .paper__ref a:hover { color: var(--sky); }
+.tempo { margin-top: 56px; }
+.tempo__t { margin: 0; font-size: 24px; font-weight: 500; letter-spacing: -.02em; }
+.tempo__lista { list-style: none; margin: 24px 0 0; padding: 0; }
+.tempo__item { display: grid; grid-template-columns: 52px 1fr; gap: 14px; padding: 10px 0 10px 12px; border-top: 1px solid var(--rule); font-size: 15.5px; line-height: 1.45; }
+.tempo__item--marco { border-left: 3px solid #f5d78e; padding-left: 9px; }
+.tempo__item a { color: var(--fg); font-weight: 500; }
+.tempo__ano { font-family: var(--mono); font-size: 14px; color: var(--mute); padding-top: 2px; }
+.tempo__onde { display: inline-block; margin-left: 6px; padding: 1px 9px; border-radius: 999px; font-size: 12.5px; font-weight: 500; background: var(--bg-2); color: var(--mute); white-space: nowrap; }
+.tempo__onde--pronto { background: var(--sky); color: #fff; }
+.tempo__onde--leitura { background: #fdf3d8; color: #6b4e0a; }
+.tempo__nota { margin: 2px 0 0; color: var(--fg-2); font-size: 14.5px; }
 
 @media (max-width: 900px) {
   .app--fora { grid-template-rows: 52px auto; }
@@ -407,9 +424,14 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
         <p class="capa__sobre capa__sobre--escuro">Depois do curso</p>
         <h2 class="trilha__t">Papers</h2>
         <p class="trilha__p">No curso, o Karpathy implementa papers: Bengio et al. (2003) no makemore, o BatchNorm, a WaveNet, Attention Is All You Need e o GPT-2. Aqui o método continua por sua conta: ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e fazer uma pergunta que o paper não fez.</p>
-        <p class="trilha__p">O Paper 1 ensina o método. Os outros são sugestões; a ficha do fim do Paper 1 serve para qualquer paper que você escolher.</p>
+        <p class="trilha__p">A trilha é a da pesquisa: cada paper é uma peça do paper do ICWM, na ordem em que o experimento precisa dele. O Paper 1 é a LeWorldModel, o world model onde o experimento roda; o Paper 2 é o Language-Forcing, o paper a superar, transplantado para dentro dela.</p>
       </header>
       <ol class="linha" id="linha-papers"></ol>
+      <section class="tempo" aria-labelledby="tempo-t">
+        <h3 class="tempo__t" id="tempo-t">A linha do tempo</h3>
+        <p class="trilha__p">Do Transformer até hoje: onde cada paper se encaixa. Os marcados com uma barra não viraram capítulo, mas entram no paper do ICWM como leitura.</p>
+        <ol class="tempo__lista" id="tempo"></ol>
+      </section>
     </div>
   </main>
 

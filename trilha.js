@@ -126,64 +126,37 @@ export const TRILHA = [
 
 // Depois do curso: papers. No curso, o Karpathy implementa papers aula a aula. Aqui o método continua:
 // ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e
-// fazer uma pergunta que o paper não fez. O Paper 1 ensina o método; os outros são sugestões, e a
-// ficha do fim do Paper 1 serve para qualquer paper escolhido na leitura do dia a dia.
+// fazer uma pergunta que o paper não fez. A trilha é a da pesquisa: os papers são as peças do paper do
+// ICWM, na ordem em que o experimento precisa delas. O Paper 1 é a LeWorldModel, a base onde o
+// experimento roda; o Paper 2 é o Language-Forcing, o paper a superar, transplantado para ela.
 export const PAPERS = [
   {
     n: 10,
-    pronto: true,
-    titulo: 'Leis de escala',
-    ref: 'Kaplan et al. (2020), Scaling Laws for Neural Language Models',
-    url: 'https://arxiv.org/abs/2001.08361',
-    constroi: 'O método inteiro num paper só: ler a equação, medir o expoente, refazer a reta da Figura 1 e uma pergunta própria.',
+    titulo: 'Um world model que planeja',
+    ref: 'Maes, Le Lidec, Scieur, LeCun & Balestriero (2026), LeWorldModel',
+    url: 'https://arxiv.org/abs/2603.19312',
+    constroi: 'Encoder e preditor treinados juntos a partir dos pixels, o SIGReg contra o colapso e o planejamento por CEM no PushT. Reproduzir o número com poucos episódios é a célula 1 do paper do ICWM: achar o regime em que a LeWM fica entre 35% e 55%.',
   },
   {
     n: 11,
-    titulo: 'Um GPT moderno',
-    ref: 'Su et al. (2021), RoFormer; Touvron et al. (2023), LLaMA',
-    url: 'https://arxiv.org/abs/2302.13971',
-    constroi: 'O GPT do curso com as peças de hoje: RoPE, RMSNorm e SwiGLU.',
+    titulo: 'Alinhar à linguagem, e superar',
+    ref: 'Li et al. (2026), Language-Forcing: Semantic Alignment of Whole-Body World Action Models',
+    url: 'https://arxiv.org/abs/2610.23894',
+    constroi: 'Descrições do que mudou, alinhadas por cosseno às features futuras e descartadas no teste, transplantadas para dentro da LeWM. Refazer as ablações que dizem onde ele é forte (camada do meio, peso 1, descrições embaralhadas, ganho pequeno com poucos dados) e a pergunta que ele não fez: e se o modelo usar a própria fala em vez de descartá-la?',
   },
-  {
-    n: 12,
-    titulo: 'Atenção em blocos',
-    ref: 'Dao et al. (2022), FlashAttention',
-    url: 'https://arxiv.org/abs/2205.14135',
-    constroi: 'A mesma atenção, calculada em pedaços, sem guardar a matriz inteira na memória.',
-  },
-  {
-    n: 13,
-    titulo: 'Ajustar com pouco',
-    ref: 'Hu et al. (2021), LoRA',
-    url: 'https://arxiv.org/abs/2106.09685',
-    constroi: 'Ajustar um modelo treinando só duas matrizes finas: W + BA.',
-  },
-  {
-    n: 14,
-    titulo: 'Aprender com preferências',
-    ref: 'Rafailov et al. (2023), Direct Preference Optimization',
-    url: 'https://arxiv.org/abs/2305.18290',
-    constroi: 'O pós-treino de um modelo a partir de pares de respostas, uma melhor que a outra.',
-  },
-  {
-    n: 15,
-    titulo: 'Imagens como sequências',
-    ref: 'Dosovitskiy et al. (2020), An Image is Worth 16x16 Words',
-    url: 'https://arxiv.org/abs/2010.11929',
-    constroi: 'O Transformer do curso lendo uma imagem cortada em quadradinhos.',
-  },
-  {
-    n: 16,
-    titulo: 'Prever a representação',
-    ref: 'Assran et al. (2023), I-JEPA',
-    url: 'https://arxiv.org/abs/2301.08243',
-    constroi: 'Um modelo que aprende prevendo o que uma parte escondida da imagem representa, não os pixels.',
-  },
-  {
-    n: 17,
-    titulo: 'Abrir o modelo',
-    ref: 'Bricken et al. (2023), Towards Monosemanticity',
-    url: 'https://transformer-circuits.pub/2023/monosemantic-features',
-    constroi: 'Um autoencoder esparso que separa as ativações de um modelo em ideias que dá para ler.',
-  },
+]
+
+// A linha do tempo dos papers, do curso até hoje: onde cada capítulo se encaixa, e as leituras que não
+// viraram capítulo mas entram no paper do ICWM. `paper` é o n do capítulo em PAPERS; `onde` diz onde a
+// leitura aparece quando não é um capítulo.
+export const MARCOS = [
+  { data: '2017', ref: 'Vaswani et al., Attention Is All You Need', url: 'https://arxiv.org/abs/1706.03762', nota: 'O Transformer.', onde: 'No curso, aula 7' },
+  { data: '2019', ref: 'Radford et al., GPT-2', url: 'https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf', nota: 'O modelo que o curso termina reproduzindo.', onde: 'No curso, aula 9' },
+  { data: '2024', ref: 'Deng, Choi & Shieber, Stepwise Internalization', url: 'https://arxiv.org/abs/2405.14838', nota: 'Tirar os passos escritos aos poucos até o modelo resolver sem eles. A retirada gradual que o Coconut adota.', onde: 'Leitura junto do Paper 2', marco: true },
+  { data: '2024', ref: 'Hao et al., Coconut', url: 'https://arxiv.org/abs/2412.06769', nota: 'Raciocinar em vetores, não em palavras, que continuam no teste. A fala interna retida da nossa condição.', onde: 'Leitura junto do Paper 2', marco: true },
+  { data: '2025', ref: 'Chen et al., ECoT-Lite', url: 'https://arxiv.org/abs/2505.08243', nota: 'Raciocínio no treino, dropout no teste. A condição do dropout da própria fala.', onde: 'Leitura junto do Paper 2', marco: true },
+  { data: '2026', ref: 'Maes et al., LeWorldModel', url: 'https://arxiv.org/abs/2603.19312', nota: 'Um JEPA treinado dos pixels que planeja.', paper: 10 },
+  { data: '2026', ref: 'Wang, Wei & Ling, Grounding Spatial Relations in a Compact World Model', url: 'https://arxiv.org/abs/2607.06925', nota: 'Quando o texto que nomeia a resposta entra no preditor, ele copia a resposta em vez de aprender a dinâmica; o objetivo fica no custo do planejador. Por que a fala do outro só pode ser alvo.', onde: 'Leitura junto do Paper 1', marco: true },
+  { data: '2026', ref: 'Li et al., Language-Forcing', url: 'https://arxiv.org/abs/2610.23894', nota: 'Linguagem alinhada às features futuras, descartada no teste.', paper: 11 },
+  { data: '2026', ref: 'Lu et al., TacitVLA', url: 'https://arxiv.org/abs/2610.17540', nota: 'Aprender a gerar o raciocínio já basta? O risco mais sério para a tese; a condição da fala gerada mas não consumida.', onde: 'Leitura junto do Paper 2', marco: true },
 ]
