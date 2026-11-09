@@ -18,3 +18,4 @@ O Paper 2 (`paper2.js`) aplica o método a um paper que não muda o modelo, Kapl
 
 Nos dois, cada lição mostra o trecho do paper que está implementando (a equação, a figura, a frase), recortado do PDF do arXiv, com o link para a página; os recortes ficam em `papers/`. Os próximos papers sugeridos estão em `PAPERS`, em `trilha.js`, e a linha do tempo da página da trilha (`MARCOS`) mostra onde cada um se encaixa, junto dos marcos que não viraram capítulo (GPT-3, InstructGPT, Chinchilla).
 
+Os Papers 3 a 7 formam uma linha de pesquisa só, a do paper do ICWM: a linguagem como andaime de um world model, que vira fala interna (Vygotsky). Cada um é uma condição do experimento principal: o Coconut (raciocinar em vetores que ficam no teste), o ECoT-Lite (dropout do raciocínio), o TacitVLA (gerar sem consumir), a LeWorldModel (a base e o código) e o Language-Forcing (alinhar à linguagem, o paper a superar). As leituras de apoio estão em `MARCOS`.
