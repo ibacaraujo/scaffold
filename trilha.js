@@ -127,10 +127,10 @@ export const TRILHA = [
 // Depois do curso: papers. No curso, o Karpathy implementa papers aula a aula. Aqui o método continua:
 // ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e
 // fazer uma pergunta que o paper não fez. O Paper 1 (LoRA) ensina o método no caso típico, uma linha de
-// base mais uma diferença; o Paper 2 (Kaplan) o aplica a um paper de medida. Os Papers 3 a 7 seguem uma
-// linha de pesquisa só, a do paper do ICWM: a linguagem como andaime de um world model (Vygotsky), que
-// vira fala interna. Cada um é uma das condições do experimento principal desse paper. A ficha do fim
-// do Paper 1 serve para qualquer outro paper escolhido na leitura do dia a dia.
+// base mais uma diferença; o Paper 2 (Kaplan) o aplica a um paper de medida. Os Papers 3 e 4 são o
+// começo do paper do ICWM: entender a LeWorldModel por dentro, onde o experimento roda, e depois
+// transplantar para ela o Language-Forcing, o paper a superar. Os outros papers do plano (Coconut,
+// ECoT-Lite, TacitVLA) ficam como leituras na linha do tempo.
 export const PAPERS = [
   {
     n: 10,
@@ -150,38 +150,17 @@ export const PAPERS = [
   },
   {
     n: 12,
-    titulo: 'Pensar sem escrever',
-    ref: 'Hao et al. (2024), Coconut: Training Large Language Models to Reason in a Continuous Latent Space',
-    url: 'https://arxiv.org/abs/2412.06769',
-    constroi: 'O GPT-2 do curso troca os passos escritos do raciocínio, um a um, por vetores que ele mesmo gera e reaproveita, e esses vetores continuam no teste. É a fala interna do paper do ICWM, em texto.',
-  },
-  {
-    n: 13,
-    titulo: 'Raciocinar no treino, largar no teste',
-    ref: 'Chen et al. (CoRL 2025), Training Strategies for Efficient Embodied Reasoning (ECoT-Lite)',
-    url: 'https://arxiv.org/abs/2505.08243',
-    constroi: 'Uma política de robô treinada com o raciocínio em texto que às vezes some no treino (reasoning dropout). No paper do ICWM, é a condição do dropout aleatório da própria fala.',
-  },
-  {
-    n: 14,
-    titulo: 'Gerar sem consumir',
-    ref: 'Lu et al. (2026), TacitVLA: Reasoning Vision-Language-Action Models Without Reasoning Latency',
-    url: 'https://arxiv.org/abs/2610.17540',
-    constroi: 'A mesma política, mudando só uma célula da máscara de atenção: a ação nunca lê o raciocínio, e mesmo assim ganha. No paper do ICWM, é a condição da fala gerada mas não consumida, o risco mais sério para a tese.',
-  },
-  {
-    n: 15,
     titulo: 'Um world model que planeja',
     ref: 'Maes, Le Lidec, Scieur, LeCun & Balestriero (2026), LeWorldModel',
     url: 'https://arxiv.org/abs/2603.19312',
-    constroi: 'Encoder e preditor treinados juntos a partir dos pixels, o SIGReg contra o colapso e o planejamento por CEM no PushT. É a base do paper do ICWM e o código onde o experimento roda.',
+    constroi: 'Encoder e preditor treinados juntos a partir dos pixels, o SIGReg contra o colapso e o planejamento por CEM no PushT. Reproduzir o número com poucos episódios é a célula 1 do paper do ICWM: achar o regime em que a LeWM fica entre 35% e 55%.',
   },
   {
-    n: 16,
-    titulo: 'Alinhar à linguagem',
+    n: 13,
+    titulo: 'Alinhar à linguagem, e superar',
     ref: 'Li et al. (2026), Language-Forcing: Semantic Alignment of Whole-Body World Action Models',
     url: 'https://arxiv.org/abs/2610.23894',
-    constroi: 'Descrições de um VLM sobre o que mudou, alinhadas por cosseno às features futuras do modelo e descartadas no teste. O paper a superar: a afirmação a testar é que alinhar já captura o benefício da linguagem.',
+    constroi: 'Descrições do que mudou, alinhadas por cosseno às features futuras e descartadas no teste, transplantadas para dentro da LeWM. Refazer as ablações que dizem onde ele é forte (camada do meio, peso 1, descrições embaralhadas, ganho pequeno com poucos dados) e a pergunta que ele não fez: e se o modelo usar a própria fala em vez de descartá-la?',
   },
 ]
 
@@ -196,11 +175,11 @@ export const MARCOS = [
   { data: '2020', ref: 'Brown et al., GPT-3', url: 'https://arxiv.org/abs/2005.14165', nota: 'O GPT-2 cem vezes maior, aprendendo a tarefa pelos exemplos no prompt. O marco mais importante do período; não cabe num experimento pequeno.', onde: 'Leitura junto do Paper 2', marco: true },
   { data: '2021', ref: 'Hu et al., LoRA', url: 'https://arxiv.org/abs/2106.09685', nota: 'Ajustar treinando só W + BA.', paper: 10 },
   { data: '2022', ref: 'Hoffmann et al., Chinchilla', url: 'https://arxiv.org/abs/2203.15556', nota: 'Refaz as leis de escala e muda quanto dado usar para cada tamanho.', onde: 'Leitura junto do Paper 2', marco: true },
-  { data: '2024', ref: 'Deng, Choi & Shieber, Stepwise Internalization', url: 'https://arxiv.org/abs/2405.14838', nota: 'Tirar os passos escritos aos poucos até o modelo resolver sem eles. A retirada gradual que o Coconut adota.', onde: 'Leitura antes do Paper 3', marco: true },
-  { data: '2024', ref: 'Hao et al., Coconut', url: 'https://arxiv.org/abs/2412.06769', nota: 'Raciocinar em vetores, não em palavras.', paper: 12 },
-  { data: '2025', ref: 'Chen et al., ECoT-Lite', url: 'https://arxiv.org/abs/2505.08243', nota: 'Raciocínio no treino, dropout no teste.', paper: 13 },
-  { data: '2026', ref: 'Maes et al., LeWorldModel', url: 'https://arxiv.org/abs/2603.19312', nota: 'Um JEPA treinado dos pixels que planeja.', paper: 15 },
-  { data: '2026', ref: 'Wang, Wei & Ling, Grounding Spatial Relations in a Compact World Model', url: 'https://arxiv.org/abs/2607.06925', nota: 'Quando o texto que nomeia a resposta entra no preditor, ele copia a resposta em vez de aprender a dinâmica; o objetivo fica no custo do planejador. Por que a fala do outro só pode ser alvo.', onde: 'Leitura junto do Paper 6', marco: true },
-  { data: '2026', ref: 'Li et al., Language-Forcing', url: 'https://arxiv.org/abs/2610.23894', nota: 'Linguagem alinhada às features futuras, descartada no teste.', paper: 16 },
-  { data: '2026', ref: 'Lu et al., TacitVLA', url: 'https://arxiv.org/abs/2610.17540', nota: 'Aprender a gerar o raciocínio já basta?', paper: 14 },
+  { data: '2024', ref: 'Deng, Choi & Shieber, Stepwise Internalization', url: 'https://arxiv.org/abs/2405.14838', nota: 'Tirar os passos escritos aos poucos até o modelo resolver sem eles. A retirada gradual que o Coconut adota.', onde: 'Leitura junto do Paper 4', marco: true },
+  { data: '2024', ref: 'Hao et al., Coconut', url: 'https://arxiv.org/abs/2412.06769', nota: 'Raciocinar em vetores, não em palavras, que continuam no teste. A fala interna retida da condição 8.', onde: 'Leitura junto do Paper 4', marco: true },
+  { data: '2025', ref: 'Chen et al., ECoT-Lite', url: 'https://arxiv.org/abs/2505.08243', nota: 'Raciocínio no treino, dropout no teste. A condição 5.', onde: 'Leitura junto do Paper 4', marco: true },
+  { data: '2026', ref: 'Maes et al., LeWorldModel', url: 'https://arxiv.org/abs/2603.19312', nota: 'Um JEPA treinado dos pixels que planeja.', paper: 12 },
+  { data: '2026', ref: 'Wang, Wei & Ling, Grounding Spatial Relations in a Compact World Model', url: 'https://arxiv.org/abs/2607.06925', nota: 'Quando o texto que nomeia a resposta entra no preditor, ele copia a resposta em vez de aprender a dinâmica; o objetivo fica no custo do planejador. Por que a fala do outro só pode ser alvo.', onde: 'Leitura junto do Paper 3', marco: true },
+  { data: '2026', ref: 'Li et al., Language-Forcing', url: 'https://arxiv.org/abs/2610.23894', nota: 'Linguagem alinhada às features futuras, descartada no teste.', paper: 13 },
+  { data: '2026', ref: 'Lu et al., TacitVLA', url: 'https://arxiv.org/abs/2610.17540', nota: 'Aprender a gerar o raciocínio já basta? O risco mais sério para a tese; a condição 4.', onde: 'Leitura junto do Paper 4', marco: true },
 ]
