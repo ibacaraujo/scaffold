@@ -559,10 +559,15 @@ import { CAPITULO_2 } from './capitulo2.js'
 import { DEPOIS_1 } from './depois1.js'
 import { PAPER_1 } from './paper1.js'
 import { PAPER_2 } from './paper2.js'
-// Os capítulos de paper vêm depois do curso e formam uma trilha à parte (têm o campo `paper`).
+import { PESQUISA_1 } from './pesquisa1.js'
+import { PESQUISA_2 } from './pesquisa2.js'
+// Os capítulos de paper vêm depois do curso (têm o campo `paper`) e formam duas trilhas à parte: a
+// Mainstream (n de 10 a 19) e a Linha de pesquisa (n a partir de 20).
 export const CAPITULOS = [
   { n: 1, titulo: CAPITULO.titulo, aula: CAPITULO.aula, partes: [...PARTES, DEPOIS_1] },
   CAPITULO_2,
   PAPER_1,
   PAPER_2,
+  PESQUISA_1,
+  PESQUISA_2,
 ]

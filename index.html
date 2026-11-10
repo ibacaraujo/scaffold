@@ -422,15 +422,27 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
       <p class="trilha__fim">As aulas estão em inglês, no YouTube. O Scaffold não é afiliado ao curso.</p>
       <header class="trilha__topo trilha__topo--papers">
         <p class="capa__sobre capa__sobre--escuro">Depois do curso</p>
-        <h2 class="trilha__t">Papers</h2>
+        <h2 class="trilha__t">Papers: Mainstream</h2>
         <p class="trilha__p">No curso, o Karpathy implementa papers: Bengio et al. (2003) no makemore, o BatchNorm, a WaveNet, Attention Is All You Need e o GPT-2. Aqui o método continua por sua conta: ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e fazer uma pergunta que o paper não fez.</p>
-        <p class="trilha__p">A trilha é a da pesquisa: cada paper é uma peça do paper do ICWM, na ordem em que o experimento precisa dele. O Paper 1 é a LeWorldModel, o world model onde o experimento roda; o Paper 2 é o Language-Forcing, o paper a superar, transplantado para dentro dela.</p>
+        <p class="trilha__p">Esta trilha é a dos papers famosos, um por capítulo. O Paper 1 ensina o método no caso típico: uma linha de base (o GPT do curso) mais uma diferença. O Paper 2 o aplica a um paper que não muda o modelo, só o experimento. Os outros são sugestões; a ficha do fim do Paper 1 serve para qualquer paper que você escolher.</p>
       </header>
       <ol class="linha" id="linha-papers"></ol>
       <section class="tempo" aria-labelledby="tempo-t">
         <h3 class="tempo__t" id="tempo-t">A linha do tempo</h3>
-        <p class="trilha__p">Do Transformer até hoje: onde cada paper se encaixa. Os marcados com uma barra não viraram capítulo, mas entram no paper do ICWM como leitura.</p>
+        <p class="trilha__p">Do Transformer até hoje: onde cada paper se encaixa. Os marcados com uma barra não viraram capítulo, porque não cabem num experimento pequeno, mas vale lê-los.</p>
         <ol class="tempo__lista" id="tempo"></ol>
+      </section>
+      <header class="trilha__topo trilha__topo--papers">
+        <p class="capa__sobre capa__sobre--escuro">Depois do curso</p>
+        <h2 class="trilha__t">Linha de pesquisa</h2>
+        <p class="trilha__p">Uma pesquisa de verdade, em andamento, mostrada passo a passo: o paper do ICWM, sobre a linguagem como andaime de um world model, que depois vira fala interna. Cada capítulo é uma peça desse paper, na ordem em que o experimento precisa dela, e termina num passo que roda numa GPU.</p>
+        <p class="trilha__p">A Pesquisa 1 é a LeWorldModel, o world model onde o experimento roda. A Pesquisa 2 é o Language-Forcing, o paper a superar, transplantado para dentro dela. O método é o mesmo da Mainstream; o que muda é para onde ele leva.</p>
+      </header>
+      <ol class="linha" id="linha-pesquisa"></ol>
+      <section class="tempo" aria-labelledby="tempo-pesquisa-t">
+        <h3 class="tempo__t" id="tempo-pesquisa-t">A linha do tempo da pesquisa</h3>
+        <p class="trilha__p">Os capítulos e as leituras do paper do ICWM. Os marcados com uma barra não viraram capítulo, mas entram no paper como leitura.</p>
+        <ol class="tempo__lista" id="tempo-pesquisa"></ol>
       </section>
     </div>
   </main>

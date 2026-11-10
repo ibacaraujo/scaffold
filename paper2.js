@@ -1,289 +1,239 @@
-// Paper 2 da trilha de pesquisa: Language-Forcing (Li et al., 2026), arXiv:2610.23894. É o paper a
-// superar, transplantado para dentro da LeWorldModel do Paper 1: a condição 3 do plano do paper do ICWM.
+// Paper 2: o método do Paper 1 num paper que não muda o modelo. O Paper 1 (LoRA) é o caso típico,
+// uma linha de base mais uma diferença no código. Aqui o núcleo é uma relação medida: implementar é
+// refazer a medida. A ficha do fim do Paper 1 vale também para papers assim.
 //
-// O paper original roda num world-action model de humanoide (GigaWorld-Policy), não num JEPA. O
-// transplante é nosso, e o capítulo diz isso. O método: achar o núcleo (descrições do que muda, alinhadas
-// por cosseno às features futuras de uma camada do meio, e descartadas no teste), ler as ablações que dizem
-// onde ele é forte (Tabelas 2 e 3, Figura 4), implementar o núcleo em NumPy e terminar na pergunta do
-// paper do ICWM: e se o modelo usar a própria fala em vez de descartá-la?
-//
-// Números do paper usados aqui: equações (3) e (4); Tabela 2 (bloco 22 e λ = 1,0 com 79,17%; sem
-// alinhamento, 68,39%); Tabela 3 (10%: 33,57 → 36,90; 40%: 45,65 → 56,79; 70%: 59,76 → 69,64; 100%:
-// 68,39 → 79,17); Figura 4 (descrições pareadas valem 15,95 pontos a mais que as embaralhadas).
+// O paper: Kaplan et al. (2020), "Scaling Laws for Neural Language Models", arXiv:2001.08361.
+// As constantes usadas aqui são as da equação (1.1) do paper: alfa_N ≈ 0,076 e N_c ≈ 8,8 × 10^13
+// parâmetros (sem contar os embeddings). O experimento roda no navegador: um modelo pequeno, de
+// features aleatórias, em vez de um Transformer. Ele reproduz a forma da lei (uma reta no gráfico
+// log-log), não o número 0,076. A regularização do modelo (reg=0.1) faz o papel do early stopping do
+// paper; a última lição de código a tira e mostra o pico da dupla descida, em N = número de exemplos.
 
-const URL = 'https://arxiv.org/abs/2610.23894'
-const trecho = (onde, texto) => `<p><a href="${URL}" target="_blank" rel="noopener">${onde}</a>: “${texto}”</p>`
+// O experimento dos três últimos passos de código. Cada passo roda sozinho, então cada um traz tudo.
+const EXPERIMENTO = `import numpy as np
 
-const PERDA = `import numpy as np
+# A tarefa: aprender uma função de 3 números. Ela é fixa: a mesma em todos os passos.
+r = np.random.default_rng(42)
+P = r.normal(0, 0.7, (3, 10))
+amp = r.normal(0, 1, 10)
 
-def perda_lf(e_chapeu, e):
-    # e_chapeu, e: (B, d). Um vetor previsto e um vetor da descrição por amostra.
-    cos = np.sum(e_chapeu * e, axis=1) / (np.linalg.norm(e_chapeu, axis=1) * np.linalg.norm(e, axis=1))
-    return 1 - cos.mean()
+def alvo(X):
+    return np.sin(X @ P) @ amp / np.sqrt(10)
+
+def dados(n, semente):
+    X = np.random.default_rng(semente).normal(0, 1, (n, 3))
+    return X, alvo(X)
+
+X_treino, y_treino = dados(3000, 1)
+X_teste, y_teste = dados(1000, 2)
+
+# O modelo de tamanho N: N neurônios ReLU com pesos sorteados e fixos.
+# Só a última camada aprende, e ela tem solução exata (mínimos quadrados).
+# O reg é uma regularização pequena, que faz o papel do early stopping do paper.
+def treinar(N, X, y, semente=0, reg=0.1):
+    r = np.random.default_rng(100 + semente)
+    W = r.normal(0, 1, (3, N))
+    b = r.normal(0, 1, N)
+    F = np.maximum(0, X @ W + b)
+    c = np.linalg.solve(F.T @ F + reg * np.eye(N), F.T @ y)
+    return W, b, c
+
+def perda(modelo, X, y):
+    W, b, c = modelo
+    erro = np.maximum(0, X @ W + b) @ c - y
+    return np.mean(erro ** 2) / np.var(y)
+
+def perda_media(N, X, y, reg=0.1):
+    # A média de 3 sorteios, para a curva não depender da sorte de um só.
+    return np.mean([perda(treinar(N, X, y, s, reg), X_teste, y_teste) for s in range(3)])
+
+Ns = [4, 8, 16, 32, 64, 128]
 `
 
-const TABELA3 = `import numpy as np
-
-dados = np.array([10, 40, 70, 100])           # % das demonstrações
-sem_lf = np.array([33.57, 45.65, 59.76, 68.39])
-com_lf = np.array([36.90, 56.79, 69.64, 79.17])
+const MEDIR = `perdas = [perda_media(N, X_treino, y_treino) for N in Ns]
 `
 
-const ex = (id, titulo, passo) => ({ id, titulo, passos: [passo] })
+// A pergunta própria: as mesmas perdas com 100 exemplos, e um tamanho a mais para ver o fim da curva.
+const ABL_INICIO = `
+Ns = [4, 8, 16, 32, 64, 128, 256]
+perdas_muitos = [perda_media(N, X_treino, y_treino) for N in Ns]
+`
+
+const ABL_FIM = `
+import matplotlib.pyplot as plt
+plt.figure(figsize=(5, 3.4))
+plt.loglog(Ns, perdas_muitos, "o-", label="3000 exemplos")
+if perdas_poucos:
+    plt.loglog(Ns, perdas_poucos, "s-", label="100 exemplos")
+plt.xlabel("N (tamanho do modelo)")
+plt.ylabel("perda no teste")
+plt.legend()
+
+def inclinacoes(perdas):
+    p = np.array(perdas)
+    return np.round(-np.log(p[1:] / p[:-1]) / np.log(2), 2)
+
+print("inclinações locais, 3000 exemplos:", inclinacoes(perdas_muitos))
+print("inclinações locais, 100 exemplos: ", inclinacoes(perdas_poucos))
+`
+
+// O pico: sem regularização, com 100 exemplos e muitos tamanhos perto de 100.
+const PICO_INICIO = `
+# Sem regularização: reg quase zero. Só 100 exemplos de treino.
+Ns_finos = [40, 60, 80, 90, 95, 100, 105, 110, 120, 140, 160, 200]
+perdas = [perda_media(N, X_treino[:100], y_treino[:100], reg=1e-6) for N in Ns_finos]
+`
+
+const PICO_FIM = `
+import matplotlib.pyplot as plt
+plt.figure(figsize=(5, 3.4))
+plt.plot(Ns_finos, perdas, "o-")
+plt.axvline(100, color="gray", ls=":", label="N = número de exemplos")
+plt.xlabel("N (tamanho do modelo)")
+plt.ylabel("perda no teste")
+plt.legend()
+print("pior tamanho:", pior_N)
+`
+
+// Um trecho do paper, recortado do PDF do arXiv (v1), com o link para a página. Como o Karpathy nas
+// aulas: o paper aberto ao lado do código, na parte exata que está sendo implementada.
+const trecho = (arquivo, onde, pagina, alt) => `<figure class="trecho">
+<a href="papers/kaplan2020/${arquivo}.png" target="_blank" rel="noopener" title="Abrir em tamanho cheio"><img src="papers/kaplan2020/${arquivo}.png" alt="${alt}" loading="lazy"></a>
+<figcaption><span class="trecho__rotulo">No paper</span> · Kaplan et al. (2020), ${onde} · <a href="https://arxiv.org/pdf/2001.08361v1#page=${pagina}" target="_blank" rel="noopener">abrir na página ${pagina}</a></figcaption>
+</figure>`
 
 export const PAPER_2 = {
   n: 11,
   titulo: 'Paper 2',
   paper: {
-    titulo: 'Language-Forcing: Advancing Humanoid Loco-Manipulation via Semantic Alignment of Whole-Body World Action Models',
-    autores: 'Li et al.',
-    ano: 2026,
-    url: URL,
+    titulo: 'Scaling Laws for Neural Language Models',
+    autores: 'Kaplan et al.',
+    ano: 2020,
+    url: 'https://arxiv.org/abs/2001.08361',
   },
-  aula: URL,
-  depois: {
-    nota: 'O Language-Forcing está lido, implementado e transplantado no papel. Agora vem o plano do transplante: o que entra na LeWM, com que controles, e como ler as comparações.',
-    botao: 'Ir para o plano do transplante',
-    fim: 'O plano do transplante está escrito. Com o número da célula 1, ele roda na mesma LeWM, nos mesmos dados.',
-  },
+  aula: 'https://arxiv.org/abs/2001.08361',
   partes: [
     {
       id: 'matematica',
       titulo: 'Ler o paper',
       modulos: [
         {
-          titulo: 'O que é novo',
+          titulo: 'O método',
           licoes: [
             {
-              id: 'lf-nucleo',
-              titulo: 'Achar o núcleo',
-              porque: 'O Language-Forcing é o paper que o do ICWM precisa superar. Para superá-lo, primeiro é preciso saber exatamente o que ele faz, e o que ele não faz.',
+              id: 'kaplan-nucleo',
+              titulo: 'Um núcleo que não é código',
+              porque: 'No Paper 1, o núcleo era uma mudança no código: W vira W + BA. Nem todo paper é assim. Este é o outro tipo: o que ele traz de novo é uma medida.',
               passos: [
                 {
-                  texto: `<p>Um <strong>world-action model</strong> prevê, ao mesmo tempo, as ações do robô e as imagens futuras. O problema que o paper aponta: prever imagens dá o mesmo peso a tudo o que muda na cena, inclusive ao que não importa para a tarefa.</p>
-<p>No treino, um modelo de visão e linguagem (VLM) congelado olha a imagem atual e uma imagem futura e escreve o que avançou na tarefa e o que deve vir a seguir. Um codificador de texto congelado (UMT5) transforma essa descrição num vetor <code>e</code>.</p>`,
-                  tarefa: 'Qual é o núcleo do Language-Forcing?',
+                  texto: `<p>O primeiro passo do método é o mesmo: achar o núcleo, começando pelo resumo. Este é o do paper de Kaplan et al. (2020):</p>
+${trecho('kaplan-resumo', 'resumo', 1, 'O resumo do paper de Kaplan et al. (2020).')}`,
+                  tarefa: 'O paper treina centenas de modelos de linguagem de tamanhos diferentes. Qual é o núcleo dele?',
                   opcoes: [
-                    { t: 'Um world-action model novo para humanoides.', por: 'O modelo é o GigaWorld-Policy, que já existia. O paper muda o treino dele.' },
-                    { t: 'Uma perda que alinha, por cosseno, as features futuras de uma camada do meio ao vetor da descrição. Tudo isso fica de fora no teste.', certa: true },
-                    { t: 'Um VLM que escreve o plano do robô durante a execução.', por: 'O VLM só roda no treino. No teste, nada de linguagem é gerado.' },
-                    { t: 'Condicionar o modelo na instrução da tarefa.', por: 'A instrução já condicionava o modelo antes. E, como alvo, ela é a pior das três opções testadas.' },
+                    { t: 'Uma arquitetura nova de Transformer.', por: 'Os modelos do paper são Transformers comuns. A novidade não está na arquitetura.' },
+                    { t: 'Um otimizador novo.', por: 'O paper usa o Adam, um otimizador que já existia.' },
+                    { t: 'Uma lei: a perda cai como uma potência do tamanho do modelo.', certa: true },
+                    { t: 'Um conjunto de dados novo.', por: 'O conjunto de dados é só o lugar do experimento. A descoberta é outra.' },
                   ],
-                  erro: 'Procure o que foi acrescentado ao treino, e o que acontece com isso no teste.',
-                  dica: 'O resumo diz: "All auxiliary components are used only during training".',
-                  solucao: 'O núcleo é a perda de alinhamento L_LF = 1 − média dos cossenos entre P(features futuras do bloco ℓ) e o vetor da descrição, somada à perda do modelo com peso λ. No teste, o projetor, o VLM e o UMT5 saem.',
-                  certo: 'O núcleo é uma perda auxiliar. A linguagem molda as features no treino e depois é descartada.',
-                  confira: trecho('Resumo', 'We encode these descriptions with a frozen text encoder and align their embeddings with intermediate, action-conditioned future-visual features, complementing the original visual and action prediction objectives. All auxiliary components are used only during training, introducing no additional inference overhead.'),
+                  erro: 'Procure o que o paper descobriu, não o que ele usou.',
+                  dica: 'Leia a segunda frase do resumo: "The loss scales as a power-law..."',
+                  solucao: 'O núcleo é a lei: a perda cai como uma potência do tamanho do modelo, dos dados e da computação.',
+                  certo: 'Às vezes o núcleo é uma relação medida, não um código novo. Implementar esse tipo de paper é refazer a medida.',
                 },
                 {
-                  texto: `<p>Para o paper do ICWM, o Language-Forcing precisa rodar dentro da LeWM do Paper 1: mesmo PushT, mesmos dados, mesma avaliação. O código original não serve, porque roda num humanoide, com 8 GPUs, em outro benchmark.</p>`,
-                  tarefa: 'No transplante, qual é a linha de base e qual é a diferença?',
+                  texto: `<p>No Paper 1, a ficha separou o paper em uma linha de base (o GPT do curso) e uma diferença (W + BA). Faça o mesmo aqui.</p>
+<p>Os modelos do paper são Transformers comuns, treinados do jeito comum. O que muda de um treino para o outro é só o tamanho: o número de parâmetros, a quantidade de dados, a computação.</p>`,
+                  tarefa: 'Neste paper, qual é a diferença em relação ao GPT do curso?',
                   opcoes: [
-                    { t: 'Linha de base: o GigaWorld-Policy. Diferença: trocar o humanoide pelo PushT.', por: 'Aí a comparação deixaria de ser com a LeWM, e as outras condições do plano rodam na LeWM.' },
-                    { t: 'Linha de base: a LeWM da célula 1. Diferença: um projetor e a perda de cosseno numa camada do meio do preditor, com a descrição do que mudou entre o_t e o_t+1 como alvo.', certa: true },
-                    { t: 'Linha de base: a LeWM. Diferença: dar a descrição como entrada do preditor no teste.', por: 'Isso já não é o Language-Forcing: nele a linguagem só é alvo, e sai no teste. Usar a fala como entrada é a pergunta do paper do ICWM.' },
+                    { t: 'Uma camada nova no bloco do Transformer.', por: 'O paper não acrescenta nada ao bloco.' },
+                    { t: 'Nenhuma no modelo: muda o experimento, que treina muitos tamanhos e mede a perda de cada um.', certa: true },
+                    { t: 'Um jeito novo de calcular a perda.', por: 'A perda é a entropia cruzada de sempre, a mesma do makemore.' },
                   ],
-                  erro: 'O transplante mantém tudo da LeWM e acrescenta só o que é do Language-Forcing.',
-                  dica: 'O alvo de linguagem sai no teste.',
-                  solucao: 'Linha de base: a LeWM. Diferença: projetor + perda de cosseno numa camada do meio do preditor; a descrição é só alvo e sai no teste.',
-                  certo: 'O transplante é uma escolha nossa, e o paper do ICWM precisa dizer isso: a condição 3 é o Language-Forcing adaptado a um JEPA, não o original.',
-                },
-              ],
-            },
-          ],
-        },
-        {
-          titulo: 'A equação',
-          licoes: [
-            {
-              id: 'lf-cos',
-              titulo: 'A perda de cosseno',
-              porque: 'A equação (3) é o núcleo inteiro. Com números pequenos, ela fica concreta.',
-              passos: [
-                {
-                  texto: `<p>O cosseno entre dois vetores é o produto escalar dividido pelo produto dos comprimentos. Ele vale 1 quando os vetores apontam para o mesmo lado, seja qual for o tamanho deles.</p>
-<p>A equação (3) é <code>L<sub>LF</sub> = 1 − (1/B) Σ<sub>b</sub> cos(ê<sub>b</sub>, e<sub>b</sub>)</code>.</p>`,
-                  tarefa: 'Num lote de duas amostras, ê₁ = (1, 0) e e₁ = (0,6; 0,8); ê₂ = (3, 4) e e₂ = (6, 8). Quanto vale L<sub>LF</sub>?',
-                  campos: [{ rotulo: 'L_LF =', resposta: 0.2, tol: 0.002 }],
-                  erro: 'cos₁ = 0,6 (os dois têm comprimento 1). cos₂ = 1 (mesma direção). Tire a média e subtraia de 1.',
-                  dica: 'A média dos cossenos é (0,6 + 1) / 2 = 0,8.',
-                  solucao: 'cos₁ = 1 × 0,6 + 0 × 0,8 = 0,6\ncos₂ = 1 (mesma direção)\nL_LF = 1 − 0,8 = 0,2',
-                  certo: 'O cosseno ignora o comprimento: só a direção do vetor previsto importa. A descrição puxa as features para uma direção, não para um tamanho.',
-                },
-                {
-                  texto: `<p>A perda total do paper é <code>L = L<sub>WAM</sub> + λ<sub>LF</sub> · L<sub>LF</sub></code>, com <code>λ<sub>LF</sub> = 1</code>.</p>
-<p>No transplante, ela vira <code>L = L<sub>pred</sub> + 0,1 · SIGReg + λ<sub>LF</sub> · L<sub>LF</sub></code>. Suponha, num passo do treino, <code>L<sub>pred</sub> = 0,05</code>, <code>SIGReg = 0,2</code> e <code>L<sub>LF</sub> = 0,3</code>.</p>`,
-                  tarefa: 'Com λ<sub>LF</sub> = 1, quanto vale a perda total?',
-                  campos: [{ rotulo: 'L =', resposta: 0.37, tol: 0.002 }],
-                  erro: 'Some 0,05 + 0,1 × 0,2 + 1 × 0,3.',
-                  dica: '0,1 × 0,2 = 0,02.',
-                  solucao: '0,05 + 0,02 + 0,3 = 0,37',
-                  certo: 'Nesse exemplo, a linguagem pesa mais que a previsão e o SIGReg juntos. O λ = 1 do paper foi escolhido para outra perda, de outro tamanho; no transplante, λ precisa ser varrido de novo.',
-                },
-              ],
-            },
-          ],
-        },
-        {
-          titulo: 'As ablações',
-          licoes: [
-            {
-              id: 'lf-camada',
-              titulo: 'A camada do meio',
-              porque: 'As ablações dizem onde o método é forte. A primeira escolhe onde aplicar o alinhamento.',
-              passos: [
-                {
-                  texto: `<p>A Tabela 2 (esquerda) aplica o alinhamento em cinco blocos diferentes, com <code>λ = 1</code>. Sem alinhamento, o modelo faz 68,39%.</p>
-<p><code>bloco 1 → 73,99</code> · <code>8 → 74,23</code> · <code>15 → 75,48</code> · <code>22 → 79,17</code> · <code>29 → 74,46</code></p>`,
-                  tarefa: 'Quantos pontos o bloco 22 ganha sobre o modelo sem alinhamento? E o bloco 29, o mais perto da saída?',
-                  campos: [
-                    { rotulo: 'bloco 22:', resposta: 10.78, tol: 0.02 },
-                    { rotulo: 'bloco 29:', resposta: 6.07, tol: 0.02 },
-                  ],
-                  erro: 'Subtraia 68,39 de cada taxa.',
-                  dica: '79,17 − 68,39 e 74,46 − 68,39.',
-                  solucao: '79,17 − 68,39 = 10,78\n74,46 − 68,39 = 6,07',
-                  certo: 'Todos os blocos ajudam, mas o melhor não é o último. O preditor da LeWM tem 6 camadas; no transplante, a varredura começa pelas do meio para o fim, não pela saída.',
-                  confira: trecho('Seção 4.3', 'Moving alignment from block 22 to block 29 reduces performance, so a layer closer to the visual output is not necessarily a better choice for language supervision.'),
+                  erro: 'Pense no que é diferente entre os modelos do paper e o GPT do curso.',
+                  dica: 'O modelo não muda. O que muda é quantos modelos se treina, e de que tamanhos.',
+                  solucao: 'Nenhuma diferença no modelo. O paper muda o experimento: treina muitos tamanhos e ajusta uma lei às perdas.',
+                  certo: 'Implementar um paper assim é refazer o experimento em miniatura. E essa medida mudou a área: poucos meses depois, a OpenAI treinou o GPT-3 (Brown et al., 2020), com 175 bilhões de parâmetros, apostando que a lei continuaria valendo.',
                 },
               ],
             },
             {
-              id: 'lf-peso',
-              titulo: 'O peso tem um pico',
-              porque: 'Mais linguagem não é sempre melhor. A segunda ablação mostra quanto peso dar a ela.',
+              id: 'kaplan-potencia',
+              titulo: 'Ler a equação',
+              porque: 'O núcleo do paper de Kaplan é uma equação curta. Antes de escrever código, vale entender o que ela diz com números na mão.',
               passos: [
                 {
-                  texto: `<p>A Tabela 2 (direita) varia o peso, com o alinhamento no bloco 22:</p>
-<p><code>λ = 0 → 68,39</code> · <code>0,5 → 74,40</code> · <code>1,0 → 79,17</code> · <code>1,5 → 73,39</code> · <code>2,0 → 68,75</code></p>`,
-                  tarefa: 'Com λ = 2, a quantos pontos o modelo fica do modelo sem alinhamento?',
-                  campos: [{ rotulo: 'pontos =', resposta: 0.36, tol: 0.01 }],
-                  erro: 'Subtraia 68,39 de 68,75.',
-                  dica: '68,75 − 68,39.',
-                  solucao: '68,75 − 68,39 = 0,36 ponto',
-                  certo: 'Com peso demais, o ganho some: a linguagem passa a competir com a previsão em vez de ajudá-la. É um U invertido no peso, e um motivo a mais para varrer λ no transplante.',
+                  texto: `<p>A equação (1.1) do paper diz como a perda <code>L</code> depende do número de parâmetros <code>N</code>. Ela está na seção 1.2, que resume as leis do paper:</p>
+${trecho('kaplan-eq1-1', 'seção 1.2, equação (1.1)', 4, 'A equação (1.1): L(N) = (N_c / N) elevado a alfa_N, com alfa_N ≈ 0,076 e N_c ≈ 8,8 × 10^13 parâmetros sem os embeddings.')}
+<p>Em português: <code>L(N) = (N<sub>c</sub> / N)<sup>α</sup></code>, onde o paper escreve <code>α<sub>N</sub></code> para lembrar que é o expoente do tamanho.</p>
+<p>As duas constantes foram medidas no paper: <code>α ≈ 0,076</code> e <code>N<sub>c</sub> ≈ 8,8 × 10<sup>13</sup></code>. A perda é a mesma da aula do makemore: a entropia cruzada, medida em nats por token.</p>
+<p>Uma conta assim, com o tamanho elevado a um expoente, se chama <strong>lei de potência</strong>.</p>`,
+                  tarefa: 'Qual é a perda prevista para um modelo de 1 bilhão de parâmetros (N = 10<sup>9</sup>)? Use uma calculadora, com duas casas decimais.',
+                  campos: [{ rotulo: 'L =', resposta: 2.3756, tol: 0.01 }],
+                  erro: 'Divida 8,8 × 10¹³ por 10⁹ e eleve o resultado a 0,076.',
+                  dica: '8,8 × 10¹³ ÷ 10⁹ = 88 000. Depois, 88 000 elevado a 0,076.',
+                  solucao: 'N_c / N = 88 000\nL = 88 000 ^ 0,076 ≈ 2,38',
+                },
+                {
+                  texto: `<p>Agora dobre o modelo. Se <code>N</code> vira <code>2N</code>, a nova perda é a antiga multiplicada por <code>2<sup>−α</sup></code>.</p>
+<p>Isso vale para qualquer <code>N</code>: numa lei de potência, dobrar o tamanho sempre corta a mesma fração da perda.</p>`,
+                  tarefa: 'Quanto vale 2<sup>−0,076</sup>, com três casas decimais?',
+                  campos: [{ rotulo: '2^(−0,076) =', resposta: 0.9487, tol: 0.002 }],
+                  erro: 'Eleve 2 a −0,076 na calculadora.',
+                  dica: 'Fica um pouco abaixo de 1.',
+                  solucao: '2 ^ (−0,076) ≈ 0,949\nDobrar o modelo tira cerca de 5% da perda.',
+                  certo: 'Cada vez que o modelo dobra, a perda cai uns 5%. É pouco a cada passo, mas vale para todos os tamanhos que o paper mediu.',
+                  confira: `<p>O paper faz a mesma conta na página 5, entre a quinta e a sexta linha:</p>
+${trecho('kaplan-dobrar', 'seção 1.2', 5, 'Trecho do paper: dobrar o número de parâmetros dá uma perda menor por um fator 2 elevado a menos alfa_N, igual a 0,95.')}`,
+                },
+                {
+                  texto: `<p>A mesma conta, ao contrário: quanto o modelo precisa crescer para a perda cair 10%?</p>
+<p>Queremos <code>(N<sub>1</sub> / N<sub>2</sub>)<sup>α</sup> = 0,9</code>. Isso dá <code>N<sub>2</sub> / N<sub>1</sub> = (1 / 0,9)<sup>1/α</sup></code>.</p>`,
+                  tarefa: 'Quantas vezes maior precisa ser o modelo para a perda cair 10%?',
+                  campos: [{ rotulo: 'N₂ / N₁ =', resposta: 4, tol: 0.05 }],
+                  erro: 'Calcule 1 ÷ 0,9 e eleve a 1 ÷ 0,076.',
+                  dica: '1 ÷ 0,9 ≈ 1,111 e 1 ÷ 0,076 ≈ 13,16.',
+                  solucao: '(1 / 0,9) ^ (1 / 0,076) ≈ 4\nO modelo precisa ficar 4 vezes maior.',
                 },
               ],
             },
             {
-              id: 'lf-embaralhar',
-              titulo: 'O controle embaralhado',
-              porque: 'Um ganho com linguagem pode vir de qualquer coisa: mais parâmetros, mais gradiente, um texto sobre a tarefa em geral. O controle embaralhado separa o conteúdo do resto.',
+              id: 'kaplan-loglog',
+              titulo: 'A reta escondida',
+              porque: 'Para conferir uma lei de potência, o paper desenha os resultados num gráfico com as duas escalas em logaritmo. Ali a curva vira uma reta, e a inclinação da reta é o expoente.',
               passos: [
                 {
-                  texto: `<p>Na Figura 4 (direita), as descrições são trocadas entre trajetórias <strong>da mesma tarefa</strong>. Cada amostra continua recebendo um texto sobre a tarefa certa, mas que descreve outro momento, de outra trajetória. O projetor, o peso e o treino ficam iguais.</p>
-<p>As descrições pareadas fazem 15,95 pontos a mais que as embaralhadas.</p>`,
-                  tarefa: 'O que esse controle mostra?',
-                  opcoes: [
-                    { t: 'Que o modelo é sensível à ordem das amostras no lote.', por: 'A troca é fixa, feita uma vez antes do treino. O que muda é qual texto vai com qual transição.' },
-                    { t: 'Que descrições de outras tarefas ajudariam mais.', por: 'O controle troca só dentro da mesma tarefa. Outras tarefas nem entram.' },
-                    { t: 'Que o ganho vem de a descrição corresponder à transição daquela amostra, e não de ter texto sobre a tarefa, nem do projetor a mais.', certa: true },
-                  ],
-                  erro: 'Compare o que é igual e o que é diferente entre as duas condições.',
-                  dica: 'Igual: a tarefa do texto, o projetor, o peso. Diferente: o momento descrito.',
-                  solucao: 'Tudo fica igual, menos a correspondência entre o texto e a transição. Os 15,95 pontos são o valor do conteúdo certo.',
-                  certo: 'É o controle mais forte do paper, e o plano do ICWM o adota: um canal mudo controla os parâmetros; o embaralhado controla o conteúdo.',
-                  confira: trecho('Seção 4.3', 'Matching each description to its original observations improves SR by 15.95 percentage points over shuffling.'),
+                  texto: `<p>Tire o logaritmo dos dois lados de <code>L = (N<sub>c</sub> / N)<sup>α</sup></code>:</p>
+<p><code>log L = α · log N<sub>c</sub> − α · log N</code></p>
+<p>Com <code>x = log N</code> e <code>y = log L</code>, isso é <code>y = (α · log N<sub>c</sub>) − α · x</code>: a equação de uma reta.</p>
+<p>É por isso que a Figura 1, a principal do paper, tem as duas escalas em logaritmo. No painel da direita (Parameters), os pontos de <code>L(N)</code> caem numa reta, e a legenda traz a própria equação (1.1):</p>
+${trecho('kaplan-fig1', 'Figura 1', 3, 'A Figura 1 do paper: três gráficos log-log da perda no teste contra a computação, o tamanho dos dados e o número de parâmetros. Nos três, os pontos formam uma reta.')}`,
+                  tarefa: 'Num gráfico de log L contra log N, qual é a inclinação da reta do paper?',
+                  campos: [{ rotulo: 'inclinação =', resposta: -0.076, tol: 0.0005 }],
+                  erro: 'A inclinação é o número que multiplica x. Repare no sinal.',
+                  dica: 'Na reta, o x aparece como −α · x.',
+                  solucao: 'inclinação = −α = −0,076',
+                  certo: 'É assim que se mede α num experimento: ajusta-se uma reta no gráfico log-log e lê-se a inclinação.',
                 },
               ],
             },
             {
-              id: 'lf-dados',
-              titulo: 'Pouco dado, pouco ganho',
-              porque: 'A Tabela 3 é a que mais pesa no desenho do paper do ICWM: ela diz em que quantidade de dados o efeito existe.',
+              id: 'kaplan-experimento',
+              titulo: 'O menor experimento',
+              porque: 'O paper de Kaplan usou modelos de até 1,5 bilhão de parâmetros. Para aprender o método não é preciso isso: é preciso o menor experimento que ainda mostre o efeito.',
               passos: [
                 {
-                  texto: `<p>A Tabela 3 treina com frações das demonstrações, sempre com 50 mil atualizações:</p>
-<p><code>10%: 33,57 → 36,90</code> · <code>40%: 45,65 → 56,79</code> · <code>70%: 59,76 → 69,64</code> · <code>100%: 68,39 → 79,17</code></p>`,
-                  tarefa: 'Qual é o ganho da linguagem com 10% dos dados? E com 40%?',
-                  campos: [
-                    { rotulo: '10%:', resposta: 3.33, tol: 0.02 },
-                    { rotulo: '40%:', resposta: 11.14, tol: 0.02 },
-                  ],
-                  erro: 'Subtraia a coluna sem linguagem da coluna com linguagem.',
-                  dica: '36,90 − 33,57 e 56,79 − 45,65.',
-                  solucao: '36,90 − 33,57 = 3,33\n56,79 − 45,65 = 11,14',
-                  certo: 'Com quase nenhum dado, a linguagem quase não ajuda; a partir de 40%, ajuda uns 10 pontos. É por isso que a célula 1 põe a LeWM entre 35% e 55%: é a faixa da base sem linguagem com 40% dos dados (45,65%), onde o ganho já é de 11 pontos.',
-                },
-                {
-                  texto: `<p>O paper também diz que, com 70% dos dados e linguagem (69,64%), o modelo já passa o modelo com 100% dos dados e sem linguagem (68,39%).</p>`,
-                  tarefa: 'Em termos de dados, quanto a linguagem economizou nessa comparação?',
+                  texto: `<p>Para medir <code>L(N)</code>, o paper varia o tamanho do modelo e mede a perda no fim de cada treino.</p>
+<p>Uma medida só é limpa quando nada além de <code>N</code> atrapalha. O paper mostra que, com poucos dados, a perda para de cair mesmo com um modelo maior: quem limita passa a ser a quantidade de dados.</p>`,
+                  tarefa: 'Num experimento pequeno para medir L(N), o que deve ficar fixo e o que deve variar?',
                   opcoes: [
-                    { t: '70% das demonstrações.', por: '70% é o que foi usado. A economia é o que deixou de ser preciso.' },
-                    { t: '30% das demonstrações.', certa: true },
-                    { t: '1,25 ponto de taxa de sucesso.', por: '1,25 ponto é a diferença de desempenho, não de dados.' },
+                    { t: 'Variar N; deixar fixos a tarefa e os dados, com dados de sobra.', certa: true },
+                    { t: 'Variar N e a quantidade de dados ao mesmo tempo.', por: 'Aí não dá para saber se a perda caiu por causa do modelo ou por causa dos dados.' },
+                    { t: 'Variar a tarefa a cada tamanho, para testar mais coisas.', por: 'Com a tarefa mudando, as perdas deixam de ser comparáveis.' },
                   ],
-                  erro: 'Compare 70% com 100%.',
-                  dica: '100% − 70%.',
-                  solucao: 'O mesmo desempenho com 70% dos dados: 30% de economia.',
-                  certo: 'Eficiência de amostra é o eixo principal do paper do ICWM. Rodar as condições nos três tamanhos da célula 1 dá a mesma curva para o transplante.',
-                },
-              ],
-            },
-          ],
-        },
-        {
-          titulo: 'A pergunta que ele não fez',
-          licoes: [
-            {
-              id: 'lf-vazamento',
-              titulo: 'O que a descrição não pode dizer',
-              porque: 'Antes de perguntar se o modelo pode usar a própria fala, é preciso garantir que a fala não entrega a resposta.',
-              passos: [
-                {
-                  texto: `<p>No Language-Forcing, o VLM vê a imagem futura e pode descrever o que quiser, porque a descrição só é alvo e sai no teste.</p>
-<p>No paper do ICWM, a fala do próprio modelo fica no teste e é gerada a partir de <code>(z<sub>t</sub>, a<sub>t</sub>)</code>, sem a meta. Wang, Wei &amp; Ling (2026) mostram que, quando o texto que nomeia a resposta entra no preditor, ele copia a resposta em vez de aprender a dinâmica.</p>`,
-                  tarefa: 'Qual destas frases pode entrar no banco de frases que ensina o modelo a falar?',
-                  opcoes: [
-                    { t: '"O bloco ficou mais perto do objetivo."', por: 'Essa frase depende da meta, que a fala não vê. Ou vira ruído no alvo, ou abre caminho para o vazamento.' },
-                    { t: '"Faltam três empurrões para encaixar o T."', por: 'Também depende da meta, e ainda adianta o plano, que é trabalho do planejador.' },
-                    { t: '"O bloco girou para a esquerda e deslizou um pouco para cima."', certa: true },
-                  ],
-                  erro: 'A fala vem de (z_t, a_t). Ela pode descrever o que mudou, não o quanto falta.',
-                  dica: 'Procure a frase que se escreve sem saber onde fica a meta.',
-                  solucao: 'Só a primeira descreve a transição sem a meta. As outras precisam saber onde o objetivo está.',
-                  certo: 'A fala descreve a dinâmica; a meta fica no custo do planejador, como na LeWM. É a mesma separação do Grounding Spatial Relations.',
-                },
-              ],
-            },
-            {
-              id: 'lf-condicoes',
-              titulo: 'Descartar ou usar',
-              porque: 'A pergunta própria do capítulo é a do paper do ICWM. Ela só vira experimento quando cada alternativa tem uma condição e uma comparação.',
-              passos: [
-                {
-                  texto: `<p>As condições do plano que tocam a linguagem:</p>
-<ul>
-<li><strong>3</strong>: o Language-Forcing transplantado. A fala é do professor (o VLM), só alvo, e sai no teste.</li>
-<li><strong>4</strong>: o modelo aprende a gerar a própria fala, mas não a consome (como no TacitVLA).</li>
-<li><strong>5</strong>: o modelo consome a própria fala, que cai ao acaso no treino (como no ECoT-Lite).</li>
-<li><strong>7</strong>: canal mudo. Os mesmos tokens a mais no preditor, sem conteúdo de linguagem.</li>
-<li><strong>8</strong>: a nossa. O preditor consome a própria fala, que continua no teste (como no Coconut).</li>
-</ul>`,
-                  tarefa: 'Qual comparação separa "usar o conteúdo da fala" de "ter mais parâmetros e mais computação"?',
-                  opcoes: [
-                    { t: '8 contra 3.', por: 'Essa compara a nossa com o paper a superar. Ela diz se ganhamos, mas não por quê: a 8 também tem tokens a mais.' },
-                    { t: '8 contra 7.', certa: true },
-                    { t: '4 contra 3.', por: 'Nenhuma das duas consome a fala no teste.' },
-                  ],
-                  erro: 'Procure a condição que tem tudo da 8, menos o conteúdo.',
-                  dica: 'O canal mudo tem os mesmos tokens, sem fala.',
-                  solucao: '8 contra 7: os mesmos tokens no preditor, com e sem o conteúdo da fala.',
-                  certo: 'Cada comparação responde uma pergunta só. A 8 contra 3 diz se superamos o paper; a 8 contra 7, se foi o conteúdo; a 8 contra 4 e 5, se foi consumir a fala no teste.',
-                },
-                {
-                  texto: `<p>Para mostrar que o modelo da condição 8 <strong>usa</strong> a fala no teste, o plano faz uma supressão: troca os tokens de fala e mede a queda.</p>
-<p>Zerar uma entrada que o modelo sempre viu derruba qualquer modelo, só porque a entrada nunca foi zero no treino.</p>`,
-                  tarefa: 'Qual é o teste certo?',
-                  opcoes: [
-                    { t: 'Zerar os tokens na condição 8 e verificar que a taxa cai.', por: 'A queda pode vir só da mudança de distribuição. Sem comparar com o canal mudo, não prova nada.' },
-                    { t: 'Retirar a condição 8 e comparar com a LeWM pura.', por: 'Isso mede o ganho da condição, não se ela usa a fala no teste.' },
-                    { t: 'Trocar os tokens pelos de outra amostra, nas condições 8 e 7, e verificar que a queda na 8 é maior que na 7.', certa: true },
-                  ],
-                  erro: 'A prova é uma diferença entre duas quedas.',
-                  dica: 'Tokens de outra amostra continuam parecidos com os do treino, mas não combinam com a cena.',
-                  solucao: 'Trocar pelos tokens de outra amostra e comparar a queda da 8 com a queda da 7.',
-                  certo: 'É o mesmo raciocínio do controle embaralhado do Language-Forcing, agora no teste: o que importa é o conteúdo que combina com a cena.',
+                  erro: 'Para medir o efeito de uma coisa, só ela pode mudar.',
+                  dica: 'Só uma coisa varia. E os dados não podem ser o limite.',
+                  solucao: 'Variar só N. A tarefa e os dados ficam fixos, com dados suficientes para não limitar o modelo.',
+                  certo: 'Depois vem a pergunta própria: o que acontece quando os dados são poucos? Essa é a ablação do fim do capítulo.',
                 },
               ],
             },
@@ -296,365 +246,217 @@ export const PAPER_2 = {
       titulo: 'Implementar',
       modulos: [
         {
-          titulo: 'O núcleo em código',
+          titulo: 'A equação em código',
           licoes: [
             {
-              id: 'lf-perda-cod',
-              titulo: 'A equação (3)',
-              porque: 'O núcleo do Language-Forcing é uma função de duas linhas. Ela é a mesma no humanoide e na LeWM.',
+              id: 'kaplan-lei',
+              titulo: 'A lei como função',
+              porque: 'O primeiro código de um paper é o núcleo escrito do jeito mais direto. Aqui, o núcleo é a equação (1.1).',
               passos: [
                 {
-                  texto: `<p><code>e_chapeu</code> e <code>e</code> têm uma linha por amostra. O produto escalar de cada linha é <code>np.sum(e_chapeu * e, axis=1)</code>, e o comprimento de cada linha é <code>np.linalg.norm(x, axis=1)</code>.</p>`,
-                  tarefa: 'Complete <code>cos</code>, o cosseno de cada amostra.',
-                  inicio: `import numpy as np
-
-def perda_lf(e_chapeu, e):
-    # e_chapeu, e: (B, d). Um vetor previsto e um vetor da descrição por amostra.
-    cos = 0
-    return 1 - np.mean(cos)
-
-e_chapeu = np.array([[1.0, 0.0], [3.0, 4.0]])
-e = np.array([[0.6, 0.8], [6.0, 8.0]])
-print("L_LF =", perda_lf(e_chapeu, e))   # devia dar 0,2, como na conta à mão
-`,
-                  dica: '<code>cos = np.sum(e_chapeu * e, axis=1) / (np.linalg.norm(e_chapeu, axis=1) * np.linalg.norm(e, axis=1))</code>',
-                  solucao: PERDA + `
-e_chapeu = np.array([[1.0, 0.0], [3.0, 4.0]])
-e = np.array([[0.6, 0.8], [6.0, 8.0]])
-print("L_LF =", perda_lf(e_chapeu, e))   # devia dar 0,2, como na conta à mão
-`,
+                  texto: `<p>Uma lei de potência vira uma função de uma linha. Em Python, <code>**</code> é a potência e <code>8.8e13</code> é 8,8 × 10<sup>13</sup>.</p>`,
+                  tarefa: 'Complete <code>perda_kaplan(N)</code> com a equação do paper: <code>(N_c / N) ** alfa</code>.',
+                  inicio: `alfa = 0.076\nN_c = 8.8e13\n\ndef perda_kaplan(N):\n    pass\n\nfor N in [1e6, 1e7, 1e8, 1e9, 1e10]:\n    print(f"N = {N:.0e}   L = {perda_kaplan(N):.3f}")\n`,
+                  dica: 'Troque <code>pass</code> por <code>return (N_c / N) ** alfa</code>.',
+                  solucao: `alfa = 0.076\nN_c = 8.8e13\n\ndef perda_kaplan(N):\n    return (N_c / N) ** alfa\n\nfor N in [1e6, 1e7, 1e8, 1e9, 1e10]:\n    print(f"N = {N:.0e}   L = {perda_kaplan(N):.3f}")\n`,
                   checagem: `
-tem('perda_lf')
-if not perto(float(perda_lf(np.array([[1.0, 0.0], [3.0, 4.0]]), np.array([[0.6, 0.8], [6.0, 8.0]]))), 0.2, 1e-6):
-    falha('Para o exemplo da conta à mão, devia dar 0,2.')
-r = np.random.default_rng(0)
-x = r.normal(0, 1, (5, 7))
-if not perto(float(perda_lf(x, 3 * x)), 0.0, 1e-9):
-    falha('Vetores na mesma direção, de tamanhos diferentes, deviam dar perda 0. Divida pelos comprimentos.')
-if not perto(float(perda_lf(x, -x)), 2.0, 1e-9):
-    falha('Vetores opostos deviam dar perda 2.')
+tem('perda_kaplan')
+v = perda_kaplan(1e9)
+if v is None:
+    falha('A função ainda não devolve nada. Falta o return.')
+if not perto(v, 2.3756, 1e-3):
+    falha('Para N = 1e9, a perda devia dar cerca de 2,376.')
 `,
-                  certo: 'De 0 (mesma direção) a 2 (direções opostas). É a perda que o transplante soma à da LeWM.',
                 },
               ],
             },
             {
-              id: 'lf-projetor-cod',
-              titulo: 'O projetor',
-              porque: 'As features do preditor e o vetor do texto têm tamanhos diferentes. O projetor leva um ao espaço do outro, e só existe no treino.',
+              id: 'kaplan-ajuste',
+              titulo: 'Medir o expoente',
+              porque: 'Antes de usar uma ferramenta de análise num experimento, um bom pesquisador confere a ferramenta num caso em que sabe a resposta. Aqui, a ferramenta é o ajuste de reta no gráfico log-log.',
               passos: [
                 {
-                  texto: `<p>No paper, o projetor é <code>LayerNorm → Linear → GELU → Linear</code>, de 3 072 para 8 192 e depois para 4 096 números. No transplante, as features da LeWM têm 192 números; aqui o alvo tem 64, no lugar dos 4 096 do UMT5.</p>
-<p>As funções <code>layernorm</code> e <code>gelu</code> já estão prontas.</p>`,
-                  tarefa: 'Complete <code>projetor(F)</code> na ordem do paper: <code>layernorm</code>, <code>@ W1 + b1</code>, <code>gelu</code>, <code>@ W2 + b2</code>.',
-                  inicio: `import numpy as np
-
-def layernorm(x):
-    return (x - x.mean(-1, keepdims=True)) / np.sqrt(x.var(-1, keepdims=True) + 1e-5)
-
-def gelu(x):
-    return 0.5 * x * (1 + np.tanh(np.sqrt(2 / np.pi) * (x + 0.044715 * x ** 3)))
-
-r = np.random.default_rng(0)
-W1, b1 = r.normal(0, 1 / np.sqrt(192), (192, 256)), np.zeros(256)
-W2, b2 = r.normal(0, 1 / 16, (256, 64)), np.zeros(64)
-
-def projetor(F):
-    return F
-
-F = r.normal(0, 1, (8, 192))     # 8 amostras, as features médias de uma camada do preditor
-print("entrada:", F.shape, " saída:", projetor(F).shape)
-`,
-                  dica: '<code>return gelu(layernorm(F) @ W1 + b1) @ W2 + b2</code>',
-                  solucao: `import numpy as np
-
-def layernorm(x):
-    return (x - x.mean(-1, keepdims=True)) / np.sqrt(x.var(-1, keepdims=True) + 1e-5)
-
-def gelu(x):
-    return 0.5 * x * (1 + np.tanh(np.sqrt(2 / np.pi) * (x + 0.044715 * x ** 3)))
-
-r = np.random.default_rng(0)
-W1, b1 = r.normal(0, 1 / np.sqrt(192), (192, 256)), np.zeros(256)
-W2, b2 = r.normal(0, 1 / 16, (256, 64)), np.zeros(64)
-
-def projetor(F):
-    return gelu(layernorm(F) @ W1 + b1) @ W2 + b2
-
-F = r.normal(0, 1, (8, 192))     # 8 amostras, as features médias de uma camada do preditor
-print("entrada:", F.shape, " saída:", projetor(F).shape)
-`,
+                  texto: `<p>O <code>np.polyfit(x, y, 1)</code> acha a reta que passa mais perto dos pontos e devolve a inclinação e o intercepto.</p>
+<p>Gere pontos com a própria lei do paper e ajuste a reta em <code>log N</code> contra <code>log L</code>. Se a ferramenta estiver certa, ela devolve o expoente que você colocou.</p>`,
+                  tarefa: 'Guarde em <code>alfa_medido</code> o expoente medido: a inclinação com o sinal trocado.',
+                  inicio: `import numpy as np\n\nNs = np.array([1e6, 1e7, 1e8, 1e9, 1e10])\nLs = (8.8e13 / Ns) ** 0.076\n\ninclinacao, intercepto = np.polyfit(np.log(Ns), np.log(Ls), 1)\nalfa_medido = 0\n\nprint("alfa medido:", alfa_medido)\n`,
+                  dica: 'A inclinação é −α. Então <code>alfa_medido = -inclinacao</code>.',
+                  solucao: `import numpy as np\n\nNs = np.array([1e6, 1e7, 1e8, 1e9, 1e10])\nLs = (8.8e13 / Ns) ** 0.076\n\ninclinacao, intercepto = np.polyfit(np.log(Ns), np.log(Ls), 1)\nalfa_medido = -inclinacao\n\nprint("alfa medido:", alfa_medido)\n`,
                   checagem: `
-tem('projetor')
-x = np.random.default_rng(3).normal(2, 5, (4, 192))
-y = projetor(x)
-if y.shape != (4, 64):
-    falha('A saída devia ter formato (4, 64): uma linha por amostra, 64 números.')
-esperado = gelu(layernorm(x) @ W1 + b1) @ W2 + b2
-if not np.allclose(y, esperado):
-    falha('A ordem é layernorm, W1 + b1, gelu, W2 + b2.')
+tem('alfa_medido')
+if not perto(float(alfa_medido), 0.076, 1e-6):
+    falha('O expoente medido devia voltar a ser 0,076. Confira o sinal.')
 `,
-                  certo: 'Do formato (B, 192) para (B, 64). No teste, o projetor sai junto com a perda: a LeWM do transplante planeja igual à da célula 1.',
-                },
-              ],
-            },
-            {
-              id: 'lf-embaralhar-cod',
-              titulo: 'O controle em código',
-              porque: 'O controle embaralhado é o que separa o conteúdo do resto. Ele precisa trocar os textos sem nunca sair da tarefa, e sem deixar nenhuma amostra com o próprio texto.',
-              passos: [
-                {
-                  texto: `<p><code>tarefa[i]</code> diz de que tarefa é a amostra <code>i</code>. A função devolve <code>perm</code>: a amostra <code>i</code> passa a usar a descrição da amostra <code>perm[i]</code>.</p>
-<p>Um jeito simples: para cada tarefa, pegar os índices dela e girá-los uma posição com <code>np.roll</code>. Cada amostra recebe o texto da vizinha, da mesma tarefa.</p>`,
-                  tarefa: 'Complete a linha dentro do <code>for</code>: <code>perm[idx] = np.roll(idx, 1)</code>.',
-                  inicio: `import numpy as np
-
-def embaralhar(tarefa):
-    perm = np.arange(len(tarefa))
-    for k in np.unique(tarefa):
-        idx = np.where(tarefa == k)[0]
-        pass
-    return perm
-
-tarefa = np.array([0, 0, 1, 1, 1, 2, 2, 0])
-perm = embaralhar(tarefa)
-print("perm:", perm)
-print("mesma tarefa:", bool((tarefa[perm] == tarefa).all()))
-print("nenhuma com o próprio texto:", bool((perm != np.arange(len(tarefa))).all()))
-`,
-                  dica: 'Troque o <code>pass</code> por <code>perm[idx] = np.roll(idx, 1)</code>.',
-                  solucao: `import numpy as np
-
-def embaralhar(tarefa):
-    perm = np.arange(len(tarefa))
-    for k in np.unique(tarefa):
-        idx = np.where(tarefa == k)[0]
-        perm[idx] = np.roll(idx, 1)
-    return perm
-
-tarefa = np.array([0, 0, 1, 1, 1, 2, 2, 0])
-perm = embaralhar(tarefa)
-print("perm:", perm)
-print("mesma tarefa:", bool((tarefa[perm] == tarefa).all()))
-print("nenhuma com o próprio texto:", bool((perm != np.arange(len(tarefa))).all()))
-`,
-                  checagem: `
-tem('embaralhar')
-t = np.random.default_rng(1).integers(0, 5, 60)
-t = np.concatenate([t, np.arange(5), np.arange(5)])
-p = np.asarray(embaralhar(t))
-if sorted(p.tolist()) != list(range(len(t))):
-    falha('perm devia usar cada descrição exatamente uma vez.')
-if not (t[p] == t).all():
-    falha('Toda amostra devia receber uma descrição da mesma tarefa.')
-if not (p != np.arange(len(t))).all():
-    falha('Nenhuma amostra devia ficar com a própria descrição.')
-`,
-                  certo: 'O paper sorteia a troca uma vez, com semente fixa, e a usa no treino inteiro. O mesmo vale para o transplante.',
+                  certo: 'A ferramenta devolveu o 0,076 que entrou. Agora dá para confiar nela num experimento de verdade.',
                 },
               ],
             },
           ],
         },
         {
-          titulo: 'Reproduzir e perguntar',
+          titulo: 'Reproduzir',
           licoes: [
             {
-              id: 'lf-tabela3-cod',
-              titulo: 'A Tabela 3 em gráfico',
-              porque: 'Refazer a tabela que sustenta o desenho do experimento, em gráfico, deixa a forma do efeito à vista.',
+              id: 'kaplan-medir',
+              titulo: 'Treinar modelos de vários tamanhos',
+              porque: 'O paper treina modelos de tamanhos diferentes e mede a perda de cada um. É o mesmo experimento, em miniatura: modelos que treinam em menos de um segundo no navegador.',
               passos: [
                 {
-                  texto: `<p>Os números da Tabela 3 já estão no código. O gráfico mostra as duas curvas e a faixa de 35% a 55% da célula 1.</p>`,
-                  tarefa: 'Guarde em <code>ganhos</code> o ganho da linguagem em cada fração dos dados.',
-                  inicio: TABELA3 + `ganhos = np.zeros(4)
-
-import matplotlib.pyplot as plt
-plt.figure(figsize=(5, 3.4))
-plt.axhspan(35, 55, color="#f5d78e", alpha=0.4, label="faixa da célula 1")
-plt.plot(dados, sem_lf, "o-", label="sem linguagem")
-plt.plot(dados, com_lf, "o-", label="com Language-Forcing")
-plt.xlabel("% das demonstrações")
-plt.ylabel("taxa de sucesso (%)")
-plt.legend(loc="lower right")
-for d, g in zip(dados, ganhos):
-    print(f"{d:3d}%   ganho = {g:5.2f} pontos")
-`,
-                  dica: '<code>ganhos = com_lf - sem_lf</code>',
-                  solucao: TABELA3 + `ganhos = com_lf - sem_lf
-
-import matplotlib.pyplot as plt
-plt.figure(figsize=(5, 3.4))
-plt.axhspan(35, 55, color="#f5d78e", alpha=0.4, label="faixa da célula 1")
-plt.plot(dados, sem_lf, "o-", label="sem linguagem")
-plt.plot(dados, com_lf, "o-", label="com Language-Forcing")
-plt.xlabel("% das demonstrações")
-plt.ylabel("taxa de sucesso (%)")
-plt.legend(loc="lower right")
-for d, g in zip(dados, ganhos):
-    print(f"{d:3d}%   ganho = {g:5.2f} pontos")
-`,
+                  texto: `<p>O código já traz uma tarefa, os dados e um modelo de tamanho <code>N</code>. O modelo tem N neurônios ReLU com pesos sorteados; só a última camada aprende.</p>
+<p>Ele não é um Transformer, e isso é de propósito: é o menor modelo em que o tamanho ainda importa. Modelos assim são usados em pesquisa para estudar leis de escala, como em Bahri et al. (2021) e Maloney, Roberts &amp; Sully (2022).</p>
+<p>A função <code>perda_media(N, X, y)</code> treina um modelo de tamanho N e devolve a perda no teste.</p>`,
+                  tarefa: 'Guarde em <code>perdas</code> a perda de cada tamanho da lista <code>Ns</code>, na mesma ordem.',
+                  inicio: EXPERIMENTO + `perdas = []\n\nfor N in Ns:\n    pass\n\nfor N, L in zip(Ns, perdas):\n    print(f"N = {N:4d}   perda = {L:.4f}")\n`,
+                  dica: 'Dentro do <code>for</code>: <code>perdas.append(perda_media(N, X_treino, y_treino))</code>.',
+                  solucao: EXPERIMENTO + `perdas = []\n\nfor N in Ns:\n    perdas.append(perda_media(N, X_treino, y_treino))\n\nfor N, L in zip(Ns, perdas):\n    print(f"N = {N:4d}   perda = {L:.4f}")\n`,
                   checagem: `
-tem('ganhos')
-if not np.allclose(ganhos, [3.33, 11.14, 9.88, 10.78], atol=0.01):
-    falha('Os ganhos deviam ser com_lf - sem_lf: 3,33, 11,14, 9,88 e 10,78.')
+tem('perdas')
+if len(perdas) != len(Ns):
+    falha('Devia haver uma perda para cada tamanho: ' + str(len(Ns)) + ' ao todo.')
+if not perdas[-1] < perdas[0] / 10:
+    falha('A perda do maior modelo devia ficar bem abaixo da do menor. Confira se usou X_treino e y_treino.')
 `,
-                  certo: 'O ganho salta entre 10% e 40% e depois fica perto de 10 pontos. A faixa da célula 1 corta as curvas justamente depois do salto.',
+                  certo: 'Cada vez que o modelo dobra, a perda cai. A pergunta agora é se ela cai como uma lei de potência.',
                 },
               ],
             },
             {
-              id: 'lf-holm-cod',
-              titulo: 'Quatro comparações, uma correção',
-              porque: 'A condição 8 é comparada com quatro outras. Com quatro testes, a chance de um acerto por acaso cresce; a correção de Holm a segura em 5%.',
+              id: 'kaplan-reta',
+              titulo: 'A reta no gráfico',
+              porque: 'Reproduzir um paper é refazer a figura principal. A Figura 1 de Kaplan mostra a perda contra o tamanho em escala log-log: uma reta.',
               passos: [
                 {
-                  texto: `<p>O método de <strong>Holm</strong>: ordene os <code>m</code> valores-p do menor para o maior. O de posição <code>i</code> (começando em 0) precisa ser no máximo <code>α / (m − i)</code>. No primeiro que falha, pare: ele e todos os seguintes não são significativos.</p>
-<p>Os valores-p do código são inventados, só para testar a função. Os de verdade saem dos testes pareados da 8 contra a 3, a 4, a 5 e a 7.</p>`,
-                  tarefa: 'Complete o <code>if</code>: rejeite (marque <code>True</code>) enquanto <code>pvals[j] &lt;= alfa / (m - i)</code>; senão, pare com <code>break</code>.',
-                  inicio: `import numpy as np
+                  texto: `<p>Com as perdas medidas, ajuste a reta em <code>log N</code> contra <code>log perda</code>, como no passo de conferir a ferramenta.</p>
+<p>O alvo é o painel da direita da Figura 1. O gráfico do seu código já vem pronto, com as duas escalas em logaritmo, para comparar com ele.</p>
+${trecho('kaplan-fig1', 'Figura 1', 3, 'A Figura 1 do paper, com o painel da perda contra o número de parâmetros à direita.')}`,
+                  tarefa: 'Guarde em <code>alfa</code> o expoente medido no seu experimento.',
+                  inicio: EXPERIMENTO + MEDIR + `
+inclinacao, intercepto = np.polyfit(np.log(Ns), np.log(perdas), 1)
+alfa = 0
 
-def holm(pvals, alfa=0.05):
-    ordem = np.argsort(pvals)
-    m = len(pvals)
-    rejeita = [False] * m
-    for i, j in enumerate(ordem):
-        pass
-    return rejeita
-
-# Valores-p inventados, na ordem: 8 contra 3, 4, 5 e 7.
-p = [0.02, 0.003, 0.04, 0.30]
-print("sem correção:", [x <= 0.05 for x in p])
-print("com Holm:    ", holm(p))
+import matplotlib.pyplot as plt
+plt.figure(figsize=(5, 3.4))
+plt.loglog(Ns, perdas, "o", label="medido")
+plt.loglog(Ns, np.exp(intercepto) * np.array(Ns, float) ** inclinacao, "--", label="reta ajustada")
+plt.xlabel("N (tamanho do modelo)")
+plt.ylabel("perda no teste")
+plt.legend()
+print("alfa:", alfa)
 `,
-                  dica: `Dentro do <code>for</code>:<br><code>if pvals[j] &lt;= alfa / (m - i): rejeita[j] = True</code><br><code>else: break</code>`,
-                  solucao: `import numpy as np
+                  dica: 'Igual ao passo anterior: <code>alfa = -inclinacao</code>.',
+                  solucao: EXPERIMENTO + MEDIR + `
+inclinacao, intercepto = np.polyfit(np.log(Ns), np.log(perdas), 1)
+alfa = -inclinacao
 
-def holm(pvals, alfa=0.05):
-    ordem = np.argsort(pvals)
-    m = len(pvals)
-    rejeita = [False] * m
-    for i, j in enumerate(ordem):
-        if pvals[j] <= alfa / (m - i):
-            rejeita[j] = True
-        else:
-            break
-    return rejeita
-
-# Valores-p inventados, na ordem: 8 contra 3, 4, 5 e 7.
-p = [0.02, 0.003, 0.04, 0.30]
-print("sem correção:", [x <= 0.05 for x in p])
-print("com Holm:    ", holm(p))
+import matplotlib.pyplot as plt
+plt.figure(figsize=(5, 3.4))
+plt.loglog(Ns, perdas, "o", label="medido")
+plt.loglog(Ns, np.exp(intercepto) * np.array(Ns, float) ** inclinacao, "--", label="reta ajustada")
+plt.xlabel("N (tamanho do modelo)")
+plt.ylabel("perda no teste")
+plt.legend()
+print("alfa:", alfa)
 `,
                   checagem: `
-tem('holm')
-casos = [
-    ([0.02, 0.003, 0.04, 0.30], [False, True, False, False]),
-    ([0.01, 0.012, 0.02, 0.04], [True, True, True, True]),
-    ([0.2, 0.3, 0.4, 0.5], [False, False, False, False]),
-    ([0.001, 0.5, 0.013, 0.02], [True, False, True, True]),
-]
-for pv, esperado in casos:
-    if [bool(x) for x in holm(pv)] != esperado:
-        falha('Para ' + str(pv) + ', Holm devia dar ' + str(esperado) + '.')
+tem('alfa')
+if not 0.8 < float(alfa) < 1.4:
+    falha('O expoente devia ficar perto de 1,1. Confira o sinal da inclinação.')
 `,
-                  certo: 'Sem correção, três de quatro "funcionam"; com Holm, só uma. A correção vai para o plano antes de rodar, junto com a leitura combinada.',
+                  certo: 'Os pontos parecem cair sobre a reta. O expoente é outro (perto de 1,1, não 0,076) porque a tarefa e o modelo são outros. O paper também mede expoentes diferentes para coisas diferentes: 0,076 para o tamanho e 0,095 para os dados.',
+                },
+                {
+                  texto: `<p>Um ajuste de reta sempre devolve um número, mesmo quando os pontos fazem curva. Antes de acreditar no expoente, confira se a reta é mesmo uma reta.</p>
+<p>Como cada tamanho é o dobro do anterior, dá para medir a inclinação entre cada par de vizinhos: quanto a perda cai, em escala log, quando o modelo dobra. Isso é a <strong>inclinação local</strong>:</p>
+<p><code>−log(L<sub>2N</sub> / L<sub>N</sub>) / log 2</code></p>
+<p>Numa lei de potência, todas as inclinações locais dão o mesmo número. Se elas encolhem pelo caminho, a curva está deitando, e um expoente só não descreve os dados.</p>`,
+                  tarefa: 'Guarde em <code>locais</code> as 5 inclinações locais, uma para cada par de tamanhos vizinhos.',
+                  inicio: EXPERIMENTO + MEDIR + `
+p = np.array(perdas)
+locais = []
+
+print("inclinações locais:", np.round(locais, 2))
+`,
+                  dica: '<code>p[1:] / p[:-1]</code> divide cada perda pela anterior. Então <code>locais = -np.log(p[1:] / p[:-1]) / np.log(2)</code>.',
+                  solucao: EXPERIMENTO + MEDIR + `
+p = np.array(perdas)
+locais = -np.log(p[1:] / p[:-1]) / np.log(2)
+
+print("inclinações locais:", np.round(locais, 2))
+`,
+                  checagem: `
+tem('locais')
+v = np.asarray(locais, float)
+if v.shape != (5,):
+    falha('Devia haver 5 inclinações: uma para cada par de vizinhos entre os 6 tamanhos.')
+if not perto(float(v[0]), float(-np.log(perdas[1] / perdas[0]) / np.log(2)), 1e-6):
+    falha('A primeira inclinação devia comparar o tamanho 8 com o 4. Confira a conta.')
+if not (v > 0.6).all():
+    falha('Todas as inclinações deviam ser positivas e perto de 1. Confira o sinal.')
+`,
+                  certo: 'As inclinações oscilam em volta de 1,1, sem encolher: com dados de sobra, a reta é de verdade. Os papers de leis de escala fazem a mesma conferência. Na próxima lição, ela vai mostrar uma curva que deita.',
                 },
               ],
             },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'depois',
-      titulo: 'O transplante',
-      exercicios: true,
-      modulos: [
-        {
-          titulo: 'O plano da condição 3',
-          licoes: [
-            ex('lf-plano-transplante', 'O que entra na LeWM', {
-              texto: `<p>A condição 3 é a LeWM da célula 1 mais o Language-Forcing. O que vem do paper fica como no paper; o que não pode vir (a camada, o peso) é varrido.</p>
-<p>Preencha o plano. A checagem confere o que vem do paper e o que as ablações mandam varrer.</p>`,
-              tarefa: 'Troque cada <code>None</code>.',
-              inicio: `plano = {
-    "base": "LeWM da célula 1, mesmo número de episódios",
-    "perda": None,              # o nome da perda: "cosseno" ou "mse"?
-    "alvo_no_teste": None,      # a descrição fica no teste? True ou False
-    "camadas_preditor": [2, 3, 4, 5],   # camadas do meio para o fim, entre as 6 do preditor
-    "pesos_lf": None,           # a lista de λ a varrer, com mais de um valor
-    "controle_embaralhado": None,  # roda o controle? True ou False
-    "frase_pode_citar_meta": None, # True ou False
-}
-
-for k, v in plano.items():
-    print(f"{k:22s} {v}")
+            {
+              id: 'kaplan-ablacao',
+              titulo: 'Uma pergunta própria',
+              porque: 'O último passo do método é fazer uma pergunta que o seu experimento pode responder. Ela transforma a reprodução em pesquisa: você passa a ver algo com os próprios olhos.',
+              passos: [
+                {
+                  texto: `<p>A pergunta: <strong>o que acontece com a lei quando os dados são poucos?</strong></p>
+<p>O paper responde com outra equação, a (1.5), que junta o tamanho <code>N</code> e a quantidade de dados <code>D</code>:</p>
+${trecho('kaplan-eq1-5', 'seção 1.2, equação (1.5)', 5, 'A equação (1.5): L(N, D) é a soma de (N_c / N) elevado a alfa_N sobre alfa_D com D_c / D, tudo elevado a alfa_D.')}
+<p>Quando <code>N</code> cresce muito, o primeiro termo some e sobra <code>(D<sub>c</sub> / D)<sup>α<sub>D</sub></sup></code>: um <strong>piso</strong> que só depende dos dados. Aqui você vê esse piso com o experimento: o mesmo modelo, com só 100 exemplos de treino em vez de 3 000, e um tamanho a mais (256) para enxergar o fim da curva.</p>`,
+                  tarefa: 'Guarde em <code>perdas_poucos</code> a perda de cada tamanho treinando só com os 100 primeiros exemplos. As perdas com todos os dados já estão em <code>perdas_muitos</code>.',
+                  inicio: EXPERIMENTO + `${ABL_INICIO}perdas_poucos = []
+${ABL_FIM}`,
+                  dica: 'Os 100 primeiros exemplos são <code>X_treino[:100]</code> e <code>y_treino[:100]</code>. Use a mesma linha de <code>perdas_muitos</code>, trocando os dados.',
+                  solucao: EXPERIMENTO + `${ABL_INICIO}perdas_poucos = [perda_media(N, X_treino[:100], y_treino[:100]) for N in Ns]
+${ABL_FIM}`,
+                  checagem: `
+tem('perdas_poucos'); tem('perdas_muitos')
+if len(perdas_poucos) != len(Ns):
+    falha('Devia haver uma perda para cada tamanho: ' + str(len(Ns)) + ' ao todo.')
+if not perdas_poucos[-1] > 2 * perdas_muitos[-1]:
+    falha('Com 100 exemplos, o maior modelo devia ficar bem pior do que com 3000. Confira se usou [:100] em X e em y.')
+if not perdas_poucos[-1] > 0.9 * perdas_poucos[-2]:
+    falha('Com 100 exemplos, dobrar de 128 para 256 quase não devia ajudar. Confira se usou [:100] em X e em y.')
 `,
-              dica: 'Perda de cosseno; a descrição sai no teste; varrer λ, por exemplo [0.1, 0.3, 1.0]; o controle embaralhado roda; a frase não cita a meta.',
-              solucao: `plano = {
-    "base": "LeWM da célula 1, mesmo número de episódios",
-    "perda": "cosseno",
-    "alvo_no_teste": False,
-    "camadas_preditor": [2, 3, 4, 5],   # camadas do meio para o fim, entre as 6 do preditor
-    "pesos_lf": [0.1, 0.3, 1.0],
-    "controle_embaralhado": True,
-    "frase_pode_citar_meta": False,
-}
-
-for k, v in plano.items():
-    print(f"{k:22s} {v}")
+                  certo: 'Com 3000 exemplos, as inclinações locais ficam perto de 1 e só começam a cair no último par, em 256: até 3000 exemplos têm limite. Com 100, elas encolhem até quase zero: a curva deita e encosta num piso, e dobrar o modelo deixa de ajudar. É o que a equação (1.5) prevê. Repare que um expoente só, ajustado na curva inteira, esconderia isso: ele daria um número no meio do caminho. Anos depois, Hoffmann et al. (2022), o paper do Chinchilla, refizeram as medidas de Kaplan com mais cuidado (o ponto principal foi ajustar o learning rate à duração de cada treino) e mudaram a conclusão de quanto dado usar para cada tamanho de modelo. Reproduzir também é o jeito de achar onde um paper erra.',
+                  confira: `<p>Compare o seu gráfico com o da esquerda na Figura 9 do paper. Lá, cada cor é uma quantidade de dados: a amarela, com mais dados, é uma reta; as escuras, com poucos, deitam e encostam num piso.</p>
+${trecho('kaplan-fig9', 'Figura 9', 11, 'A Figura 9 do paper. À esquerda, a perda contra o tamanho do modelo para várias quantidades de dados: com muitos dados é uma reta, com poucos a curva para de cair.')}`,
+                },
+              ],
+            },
+            {
+              id: 'kaplan-pico',
+              titulo: 'O que a regularização esconde',
+              porque: 'Um bom experimento pequeno às vezes mostra algo que o paper não mostra. Aqui, a pergunta é sobre uma escolha do próprio código: por que o modelo usa reg=0.1?',
+              passos: [
+                {
+                  texto: `<p>O <code>treinar</code> resolve os mínimos quadrados com uma regularização pequena, <code>reg=0.1</code>. O paper de Kaplan faz algo parecido de outro jeito. Está numa frase da seção 4.2, logo abaixo da Figura 9:</p>
+${trecho('kaplan-early-stopping', 'seção 4.2', 11, 'Trecho do paper: todos os modelos são regularizados com 10% de dropout, e o treino para quando a perda no teste deixa de cair.')}
+<p>Dropout de 10% e parar o treino quando a perda no teste deixa de cair (o <em>early stopping</em>): duas regularizações. Uma frase dessas passa fácil numa leitura, e o experimento abaixo mostra por que ela importa.</p>
+<p>Para entender por que, tire a regularização e treine com só 100 exemplos, agora com muitos tamanhos perto de 100. Num modelo com exatamente 100 parâmetros que aprendem, há uma solução que passa por cada um dos 100 pontos de treino, e ela é a única.</p>`,
+                  tarefa: 'Guarde em <code>pior_N</code> o tamanho de <code>Ns_finos</code> com a maior perda no teste.',
+                  inicio: EXPERIMENTO + `${PICO_INICIO}
+pior_N = 0
+${PICO_FIM}`,
+                  dica: '<code>np.argmax(perdas)</code> devolve a posição da maior perda. Então <code>pior_N = Ns_finos[np.argmax(perdas)]</code>.',
+                  solucao: EXPERIMENTO + `${PICO_INICIO}
+pior_N = Ns_finos[np.argmax(perdas)]
+${PICO_FIM}`,
+                  checagem: `
+tem('pior_N')
+if pior_N == 0:
+    falha('pior_N ainda é 0. Procure o tamanho com a maior perda.')
+if int(pior_N) != Ns_finos[int(np.argmax(perdas))]:
+    falha('pior_N devia ser o tamanho com a maior perda, não a posição dele na lista.')
 `,
-              checagem: `
-tem('plano')
-if plano.get('perda') != 'cosseno':
-    falha('A perda do Language-Forcing é a de cosseno, a equação (3).')
-if plano.get('alvo_no_teste') is not False:
-    falha('No Language-Forcing, a descrição sai no teste.')
-pl = plano.get('pesos_lf')
-if not isinstance(pl, (list, tuple)) or len(pl) < 2:
-    falha('O λ = 1 do paper foi escolhido para outra perda. Varra mais de um valor.')
-if plano.get('controle_embaralhado') is not True:
-    falha('O controle embaralhado é o que separa o conteúdo do resto. Ele roda.')
-if plano.get('frase_pode_citar_meta') is not False:
-    falha('A fala vem de (z_t, a_t), sem a meta. A frase não pode citá-la.')
-`,
-              certo: 'O transplante fica fiel ao paper onde dá, e varre onde não dá. É o que torna a condição 3 um adversário justo.',
-            }),
-            ex('lf-plano-leitura', 'A leitura combinada', {
-              texto: `<p>Como na célula 1, a leitura vem antes do dado. Escreva o que cada resultado da comparação principal vai significar.</p>`,
-              tarefa: 'Preencha os três campos, trocando cada <code>"..."</code>.',
-              inicio: `comparacoes = ["8 x 3", "8 x 4", "8 x 5", "8 x 7"]
-correcao = "..."            # o método de correção para as quatro comparações
-se_8_vence_3_e_7 = "..."    # o que se conclui
-se_8_empata_com_7 = "..."   # o que se conclui
-
-print("## Condição 8: leitura combinada antes de rodar")
-print("- Comparações:", ", ".join(comparacoes))
-print("- Correção:", correcao)
-print("- Se a 8 vence a 3 e a 7:", se_8_vence_3_e_7)
-print("- Se a 8 empata com a 7:", se_8_empata_com_7)
-`,
-              dica: 'Correção: Holm. Se empata com o canal mudo, o ganho vem dos tokens a mais, não da fala.',
-              solucao: `comparacoes = ["8 x 3", "8 x 4", "8 x 5", "8 x 7"]
-correcao = "Holm, α = 0,05, testes pareados nas mesmas tarefas"
-se_8_vence_3_e_7 = "usar a própria fala supera descartá-la, e o ganho vem do conteúdo, não dos tokens a mais"
-se_8_empata_com_7 = "o ganho vem da capacidade a mais; a fala não é usada como conteúdo"
-
-print("## Condição 8: leitura combinada antes de rodar")
-print("- Comparações:", ", ".join(comparacoes))
-print("- Correção:", correcao)
-print("- Se a 8 vence a 3 e a 7:", se_8_vence_3_e_7)
-print("- Se a 8 empata com a 7:", se_8_empata_com_7)
-`,
-              checagem: `
-for nome in ['correcao', 'se_8_vence_3_e_7', 'se_8_empata_com_7']:
-    tem(nome)
-    v = eval(nome)
-    if not isinstance(v, str) or v.strip() in ('', '...'):
-        falha('Falta preencher "' + nome + '".')
-`,
-            }),
+                  certo: 'O pior modelo tem 100 neurônios, o mesmo número de exemplos de treino. Para passar exatamente por cada ponto, ele precisa de pesos enormes, e entre os pontos a função fica louca. Com menos neurônios, ele não consegue decorar; com mais, há muitas soluções e os mínimos quadrados escolhem a mais suave. A perda sobe e depois desce de novo: é a dupla descida (double descent), estudada por Belkin et al. (2019) e por Nakkiran et al. (2019) em redes profundas. A regularização e o early stopping apagam o pico. Sem eles, a reta log-log do paper não apareceria com poucos dados.',
+                },
+              ],
+            },
           ],
         },
       ],

@@ -1,6 +1,6 @@
 import { CAPITULOS } from './licoes.js'
 import { montarFigura } from './figuras.js'
-import { TRILHA, CURSO, PAPERS, MARCOS } from './trilha.js'
+import { TRILHA, CURSO, PAPERS, MAINSTREAM, PESQUISA, MARCOS, MARCOS_PESQUISA } from './trilha.js'
 
 const $ = (s) => document.querySelector(s)
 const licoesDa = (parte) => parte.modulos.flatMap((m) => m.licoes)
@@ -13,8 +13,11 @@ const LICOES = CAPITULOS.flatMap((c) => c.partes.flatMap(licoesDa))
 const parteDe = (l) => CAPITULOS.flatMap((c) => c.partes).find((p) => licoesDa(p).includes(l))
 const capDe = (l) => CAPITULOS.find((c) => c.partes.some((p) => licoesDa(p).includes(l)))
 const capN = (n) => CAPITULOS.find((c) => c.n === n)
-// Duas trilhas: o curso (capítulos antes das aulas) e, depois dele, os papers.
-const mesmaTrilha = (a, b) => !!capDe(a).paper === !!capDe(b).paper
+// Três trilhas: o curso, os papers Mainstream (n de 10 a 19) e a Linha de pesquisa (n a partir de 20).
+const trilhaDe = (c) => (!c.paper ? 'curso' : c.n >= 20 ? 'pesquisa' : 'mainstream')
+const mesmaTrilha = (a, b) => trilhaDe(capDe(a)) === trilhaDe(capDe(b))
+// O nome de um capítulo de paper na sua trilha: Paper 1, Paper 2… ou Pesquisa 1, Pesquisa 2…
+const rotulo = (n) => (n >= 20 ? `Pesquisa ${n - 19}` : `Paper ${n - 9}`)
 const CURSO_CAPS = CAPITULOS.filter((c) => !c.paper)
 const CHAVE = 'scaffold_v2'
 const LIMITE_MS = 10000
@@ -247,18 +250,17 @@ function mostrarResultado(box, tipo, msg, tecnico) {
   const botao = (texto, aoClicar) => { const b = add('button', texto, 'botao'); b.id = 'avancar'; b.type = 'button'; b.onclick = aoClicar; return b }
   const vaiParaDepois = s && !noDepois && parteDe(s[0]).id === 'depois'
   const fimDoCapitulo = !noDepois && fimDaLicao && (!s || capSeg !== cap)
-  const paperN = (c) => c.n - 9
   if (cap.paper && vaiParaDepois) {
     // Num capítulo de paper não há aula: depois de implementar, vem a ficha do seu próprio paper.
     const n = add('p', '', 'resultado__nota')
     n.textContent = cap.depois?.nota || `Você percorreu o método inteiro no paper de ${cap.paper.autores} (${cap.paper.ano}). Agora é a vez de um paper seu: a ficha leva o método para qualquer paper da sua leitura.`
     botao(cap.depois?.botao || 'Ir para a ficha do seu paper', () => ir(...s))
   } else if (cap.paper && fimDoCapitulo) {
-    add('p', `Você chegou ao fim do Paper ${paperN(cap)}.${s ? '' : ' O próximo paper ainda está sendo preparado.'}`, 'resultado__nota')
-    if (s) botao(`Ir para o Paper ${paperN(capSeg)}`, () => ir(...s))
+    add('p', `Você chegou ao fim do ${rotulo(cap.n)}.${s ? '' : ' O próximo paper ainda está sendo preparado.'}`, 'resultado__nota')
+    if (s) botao(`Ir para o ${rotulo(capSeg.n)}`, () => ir(...s))
   } else if (cap.paper && noDepois && fimDaLicao && (!s || capSeg !== cap)) {
-    add('p', `${cap.depois?.fim || 'A ficha está pronta. Implemente o núcleo com a mesma simplicidade, reproduza o número e escreva sobre a sua pergunta.'}${s ? ` O Paper ${paperN(capSeg)} continua daqui.` : ''}`, 'resultado__nota')
-    if (s) botao(`Ir para o Paper ${paperN(capSeg)}`, () => ir(...s))
+    add('p', `${cap.depois?.fim || 'A ficha está pronta. Implemente o núcleo com a mesma simplicidade, reproduza o número e escreva sobre a sua pergunta.'}${s ? ` O ${rotulo(capSeg.n)} continua daqui.` : ''}`, 'resultado__nota')
+    if (s) botao(`Ir para o ${rotulo(capSeg.n)}`, () => ir(...s))
   } else if (vaiParaDepois || fimDoCapitulo) {
     // Entre o capítulo e o que vem depois fica a aula: a pessoa assiste antes de seguir.
     const n = add('p', '', 'resultado__nota')
@@ -473,7 +475,7 @@ function cartaoPaper(p) {
   const ref = `<p class="paper__ref"><a href="${p.url}" target="_blank" rel="noopener">${p.ref}</a></p>`
   if (!p.pronto) return `
     <article class="cap">
-      <p class="cap__n">Paper ${p.n - 9}</p>
+      <p class="cap__n">${rotulo(p.n)}</p>
       <h3 class="cap__t">${p.titulo}</h3>
       ${ref}
       <p class="aula__p">${p.constroi}</p>
@@ -482,7 +484,7 @@ function cartaoPaper(p) {
   const c = capN(p.n), tudo = c.partes.flatMap(licoesDa), [l, i] = primeiroPorFazer(tudo)
   return `
     <article class="cap">
-      <p class="cap__n">Paper ${p.n - 9}</p>
+      <p class="cap__n">${rotulo(p.n)}</p>
       <h3 class="cap__t">${p.titulo}</h3>
       ${ref}
       <p class="aula__p">${p.constroi}</p>
@@ -495,9 +497,9 @@ function cartaoPaper(p) {
       </div>
     </article>`
 }
-function desenharTempo() {
-  const nome = (n) => `Paper ${n - 9}`
-  $('#tempo').innerHTML = MARCOS.map((m) => {
+function desenharTempo(alvo, marcos) {
+  const nome = rotulo
+  $(alvo).innerHTML = marcos.map((m) => {
     const p = m.paper && PAPERS.find((x) => x.n === m.paper)
     const onde = p ? `<span class="tempo__onde${p.pronto ? ' tempo__onde--pronto' : ''}">${nome(p.n)}${p.pronto ? '' : ', em breve'}</span>` : `<span class="tempo__onde tempo__onde--leitura">${m.onde}</span>`
     return `
@@ -508,12 +510,17 @@ function desenharTempo() {
   }).join('')
 }
 function desenharPapers() {
-  desenharTempo()
-  $('#linha-papers').innerHTML = PAPERS.map((p) => {
+  desenharTempo('#tempo', MARCOS)
+  desenharTempo('#tempo-pesquisa', MARCOS_PESQUISA)
+  desenharLinhaPapers('#linha-papers', MAINSTREAM)
+  desenharLinhaPapers('#linha-pesquisa', PESQUISA)
+}
+function desenharLinhaPapers(alvo, papers) {
+  $(alvo).innerHTML = papers.map((p) => {
     const ok = p.pronto && feito(capN(p.n).partes.flatMap(licoesDa))
     return `
       <li class="linha__item linha__item--cap linha__item--paper${p.pronto ? ' linha__item--pronto' : ' linha__item--breve'}${ok ? ' linha__item--feito' : ''}">
-        <span class="linha__no" aria-hidden="true">${ok ? '✓' : p.n - 9}</span>${cartaoPaper(p)}
+        <span class="linha__no" aria-hidden="true">${ok ? '✓' : rotulo(p.n).split(' ')[1]}</span>${cartaoPaper(p)}
       </li>`
   }).join('')
 }
