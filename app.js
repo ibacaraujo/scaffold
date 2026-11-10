@@ -33,11 +33,13 @@ const idDoPasso = (l, i) => `${l.id}.${i}`
 const passo = () => licao.passos[passoI]
 const ehCodigo = (p) => p.inicio !== undefined
 
-// Telas fora da lição: #inicio e #trilha. Sem nada no endereço, abre o início.
+// Telas fora da lição: #inicio, #trilha e as duas trilhas de papers, #mainstream e #linha-de-pesquisa.
+// Sem nada no endereço, abre o início.
+const TELAS_PAPERS = { mainstream: 'papers-mainstream', 'linha-de-pesquisa': 'papers-pesquisa' }
 let tela = 'inicio'
 function lerHash() {
   const h = location.hash.slice(1)
-  if (h === '' || h === 'inicio' || h === 'trilha') { tela = h || 'inicio'; return true }
+  if (h === '' || h === 'inicio' || h === 'trilha' || TELAS_PAPERS[h]) { tela = h || 'inicio'; return true }
   // Endereços antigos da tela de pesquisa, que saiu: abrem a trilha.
   if (h.split('/')[0] === 'pesquisa') { tela = 'trilha'; return true }
   tela = 'licao'
@@ -509,6 +511,25 @@ function desenharTempo(alvo, marcos) {
       </li>`
   }).join('')
 }
+// Na trilha, depois do curso: uma porta para cada trilha de papers.
+function desenharPortas() {
+  const porta = (href, sobre, titulo, texto, papers) => {
+    const prontos = papers.filter((p) => p.pronto)
+    const feitos = prontos.filter((p) => feito(capN(p.n).partes.flatMap(licoesDa))).length
+    const breve = papers.length - prontos.length
+    return `
+      <a class="porta" href="${href}">
+        <p class="porta__sobre">${sobre}</p>
+        <h3 class="porta__t">${titulo}</h3>
+        <p class="porta__p">${texto}</p>
+        <ul class="porta__lista">${prontos.map((p) => `<li>${rotulo(p.n)} · ${p.titulo} <span>· ${capN(p.n).paper.autores} (${capN(p.n).paper.ano})</span></li>`).join('')}</ul>
+        <p class="porta__fim">${prontos.length} prontos${breve ? `, ${breve} em breve` : ''}${feitos ? ` · ${feitos} feito${feitos > 1 ? 's' : ''}` : ''} · <b>Abrir →</b></p>
+      </a>`
+  }
+  $('#portas').innerHTML =
+    porta('#mainstream', 'Papers famosos', 'Mainstream', 'Um paper famoso por capítulo, para qualquer pessoa que terminou o curso. O Paper 1 ensina o método; a ficha do fim serve para qualquer paper.', MAINSTREAM) +
+    porta('#linha-de-pesquisa', 'Pesquisa em andamento', 'Linha de pesquisa', 'O paper do ICWM, passo a passo: cada capítulo é uma peça do experimento e termina num passo que roda numa GPU.', PESQUISA)
+}
 function desenharPapers() {
   desenharTempo('#tempo', MARCOS)
   desenharTempo('#tempo-pesquisa', MARCOS_PESQUISA)
@@ -539,14 +560,18 @@ function desenharTela() {
   $('.app').classList.toggle('app--fora', fora)
   $('#tela-inicio').hidden = tela !== 'inicio'
   $('#tela-trilha').hidden = tela !== 'trilha'
+  $('#tela-papers').hidden = !TELAS_PAPERS[tela]
+  for (const [t, id] of Object.entries(TELAS_PAPERS)) $('#' + id).hidden = tela !== t
   $('#tela-licao').hidden = fora
-  $('#link-trilha').classList.toggle('topo__trilha--atual', tela === 'trilha')
+  $('#link-trilha').classList.toggle('topo__trilha--atual', tela === 'trilha' || !!TELAS_PAPERS[tela])
   const o = onde()
   $('#topo-seguir').textContent = o.comecou ? 'Continuar' : 'Começar'
   $('#topo-seguir').href = o.href
   abrirLista(false)
   if (tela === 'inicio') { document.title = 'Scaffold'; desenharInicio() }
-  else if (tela === 'trilha') { document.title = 'A trilha · Scaffold'; desenharTrilha(); desenharPapers() }
+  else if (tela === 'trilha') { document.title = 'A trilha · Scaffold'; desenharTrilha(); desenharPortas() }
+  else if (tela === 'mainstream') { document.title = 'Mainstream · Scaffold'; desenharPapers() }
+  else if (tela === 'linha-de-pesquisa') { document.title = 'Linha de pesquisa · Scaffold'; desenharPapers() }
   else { desenharPasso(); return }
   desenharLista()
   window.scrollTo(0, 0)

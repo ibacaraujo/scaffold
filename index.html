@@ -284,6 +284,19 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
 .paper__ref { margin: -6px 0 10px; font-size: 14px; }
 .paper__ref a { color: var(--mute); }
 .paper__ref a:hover { color: var(--sky); }
+.portas__grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px; margin-top: 28px; }
+.porta { display: flex; flex-direction: column; padding: 24px 26px; background: #fff; border: 1px solid var(--rule); border-radius: 16px; color: var(--fg); text-decoration: none; transition: border-color .15s, transform .15s; }
+.porta:hover { border-color: var(--sky); transform: translateY(-2px); }
+.porta__sobre { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--sky); }
+.porta__t { margin: 6px 0 0; font-size: 28px; font-weight: 500; letter-spacing: -.025em; }
+.porta__p { margin: 10px 0 0; color: var(--fg-2); font-size: 16px; line-height: 1.5; }
+.porta__lista { margin: 14px 0 0; padding: 0; list-style: none; font-size: 15px; color: var(--fg-2); }
+.porta__lista li { padding: 6px 0; border-top: 1px solid var(--rule); }
+.porta__lista li span { color: var(--mute); }
+.porta__fim { margin-top: auto; padding-top: 18px; font-size: 15px; color: var(--mute); }
+.porta__fim b { color: var(--sky); font-weight: 600; }
+.capa__sobre a.voltar { color: var(--sky); text-decoration: none; font-weight: 500; }
+.capa__sobre a.voltar:hover { text-decoration: underline; }
 .tempo { margin-top: 56px; }
 .tempo__t { margin: 0; font-size: 24px; font-weight: 500; letter-spacing: -.02em; }
 .tempo__lista { list-style: none; margin: 24px 0 0; padding: 0; }
@@ -420,10 +433,22 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
       </header>
       <ol class="linha" id="linha"></ol>
       <p class="trilha__fim">As aulas estão em inglês, no YouTube. O Scaffold não é afiliado ao curso.</p>
-      <header class="trilha__topo trilha__topo--papers">
-        <p class="capa__sobre capa__sobre--escuro">Depois do curso</p>
-        <h2 class="trilha__t">Papers: Mainstream</h2>
-        <p class="trilha__p">No curso, o Karpathy implementa papers: Bengio et al. (2003) no makemore, o BatchNorm, a WaveNet, Attention Is All You Need e o GPT-2. Aqui o método continua por sua conta: ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e fazer uma pergunta que o paper não fez.</p>
+      <section class="portas" aria-labelledby="papers-t">
+        <header class="trilha__topo trilha__topo--papers">
+          <p class="capa__sobre capa__sobre--escuro">Depois do curso</p>
+          <h2 class="trilha__t" id="papers-t">Papers</h2>
+          <p class="trilha__p">No curso, o Karpathy implementa papers: Bengio et al. (2003) no makemore, o BatchNorm, a WaveNet, Attention Is All You Need e o GPT-2. Depois dele, o método continua por sua conta: ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e fazer uma pergunta que o paper não fez. São duas trilhas, com o mesmo método.</p>
+        </header>
+        <div class="portas__grade" id="portas"></div>
+      </section>
+    </div>
+  </main>
+
+  <main class="tela" id="tela-papers" hidden>
+    <section class="trilha" id="papers-mainstream">
+      <header class="trilha__topo">
+        <p class="capa__sobre capa__sobre--escuro"><a class="voltar" href="#trilha">← A trilha</a> · Papers, depois do curso</p>
+        <h1 class="trilha__t">Mainstream</h1>
         <p class="trilha__p">Esta trilha é a dos papers famosos, um por capítulo. O Paper 1 ensina o método no caso típico: uma linha de base (o GPT do curso) mais uma diferença. O Paper 2 o aplica a um paper que não muda o modelo, só o experimento. Os outros são sugestões; a ficha do fim do Paper 1 serve para qualquer paper que você escolher.</p>
       </header>
       <ol class="linha" id="linha-papers"></ol>
@@ -432,9 +457,11 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
         <p class="trilha__p">Do Transformer até hoje: onde cada paper se encaixa. Os marcados com uma barra não viraram capítulo, porque não cabem num experimento pequeno, mas vale lê-los.</p>
         <ol class="tempo__lista" id="tempo"></ol>
       </section>
-      <header class="trilha__topo trilha__topo--papers">
-        <p class="capa__sobre capa__sobre--escuro">Depois do curso</p>
-        <h2 class="trilha__t">Linha de pesquisa</h2>
+    </section>
+    <section class="trilha" id="papers-pesquisa">
+      <header class="trilha__topo">
+        <p class="capa__sobre capa__sobre--escuro"><a class="voltar" href="#trilha">← A trilha</a> · Papers, depois do curso</p>
+        <h1 class="trilha__t">Linha de pesquisa</h1>
         <p class="trilha__p">Uma pesquisa de verdade, em andamento, mostrada passo a passo: o paper do ICWM, sobre a linguagem como andaime de um world model, que depois vira fala interna. Cada capítulo é uma peça desse paper, na ordem em que o experimento precisa dela, e termina num passo que roda numa GPU.</p>
         <p class="trilha__p">A Pesquisa 1 é a LeWorldModel, o world model onde o experimento roda. A Pesquisa 2 é o Language-Forcing, o paper a superar, transplantado para dentro dela. O método é o mesmo da Mainstream; o que muda é para onde ele leva.</p>
       </header>
@@ -444,7 +471,7 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
         <p class="trilha__p">Os capítulos e as leituras do paper do ICWM. Os marcados com uma barra não viraram capítulo, mas entram no paper como leitura.</p>
         <ol class="tempo__lista" id="tempo-pesquisa"></ol>
       </section>
-    </div>
+    </section>
   </main>
 
   <main class="corpo" id="tela-licao">

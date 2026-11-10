@@ -10,7 +10,7 @@ Para rodar localmente: `python3 -m http.server` nesta pasta.
 
 ## Depois do curso: papers
 
-No curso, o Karpathy implementa papers aula a aula. Depois dele há duas trilhas de papers que continuam esse método por conta própria (ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e fazer uma pergunta que o paper não fez), com públicos diferentes.
+No curso, o Karpathy implementa papers aula a aula. Depois dele há duas trilhas de papers que continuam esse método por conta própria (ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e fazer uma pergunta que o paper não fez), com públicos diferentes. Na página da trilha, depois do curso, uma porta leva a cada uma: `#mainstream` e `#linha-de-pesquisa`.
 
 ### Mainstream
 
@@ -20,7 +20,7 @@ O Paper 1 (`paper1.js`) ensina o método no caso típico, uma linha de base mais
 
 O Paper 2 (`paper2.js`) aplica o método a um paper que não muda o modelo, Kaplan et al. (2020), *Scaling Laws for Neural Language Models*: ler a equação, conferir o ajuste log-log num caso com resposta conhecida, refazer a reta da Figura 1 com um modelo pequeno que roda no navegador, conferir se ela é mesmo uma reta (as inclinações locais), ver a curva encostar num piso com poucos dados (a equação 1.5) e achar o pico da dupla descida quando se tira a regularização.
 
-Nos dois, cada lição mostra o trecho do paper que está implementando (a equação, a figura, a frase), recortado do PDF do arXiv, com o link para a página; os recortes ficam em `papers/`. Os próximos papers sugeridos estão em `MAINSTREAM`, em `trilha.js`, e a linha do tempo da página da trilha (`MARCOS`) mostra onde cada um se encaixa, junto dos marcos que não viraram capítulo (GPT-3, InstructGPT, Chinchilla).
+Nos dois, cada lição mostra o trecho do paper que está implementando (a equação, a figura, a frase), recortado do PDF do arXiv, com o link para a página; os recortes ficam em `papers/`. Os próximos papers sugeridos estão em `MAINSTREAM`, em `trilha.js`, e a linha do tempo da página da Mainstream (`MARCOS`) mostra onde cada um se encaixa, junto dos marcos que não viraram capítulo (GPT-3, InstructGPT, Chinchilla).
 
 ### Linha de pesquisa
 
