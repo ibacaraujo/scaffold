@@ -1,6 +1,6 @@
 import { CAPITULOS } from './licoes.js'
 import { montarFigura } from './figuras.js'
-import { TRILHA, CURSO, PAPERS } from './trilha.js'
+import { TRILHA, CURSO, PAPERS, PESQUISA } from './trilha.js'
 
 const $ = (s) => document.querySelector(s)
 const licoesDa = (parte) => parte.modulos.flatMap((m) => m.licoes)
@@ -13,8 +13,10 @@ const LICOES = CAPITULOS.flatMap((c) => c.partes.flatMap(licoesDa))
 const parteDe = (l) => CAPITULOS.flatMap((c) => c.partes).find((p) => licoesDa(p).includes(l))
 const capDe = (l) => CAPITULOS.find((c) => c.partes.some((p) => licoesDa(p).includes(l)))
 const capN = (n) => CAPITULOS.find((c) => c.n === n)
-// Duas trilhas: o curso (capítulos antes das aulas) e, depois dele, os papers.
-const mesmaTrilha = (a, b) => !!capDe(a).paper === !!capDe(b).paper
+// Três trilhas: o curso (capítulos antes das aulas), os papers de depois do curso (engenharia) e os
+// papers do dia (pesquisa). A navegação de uma lição para a seguinte não atravessa trilhas.
+const trilhaDe = (c) => (c.pesquisa ? 'pesquisa' : c.paper ? 'paper' : 'curso')
+const mesmaTrilha = (a, b) => trilhaDe(capDe(a)) === trilhaDe(capDe(b))
 const CURSO_CAPS = CAPITULOS.filter((c) => !c.paper)
 const CHAVE = 'scaffold_v2'
 const LIMITE_MS = 10000
@@ -34,9 +36,7 @@ const ehCodigo = (p) => p.inicio !== undefined
 let tela = 'inicio'
 function lerHash() {
   const h = location.hash.slice(1)
-  if (h === '' || h === 'inicio' || h === 'trilha') { tela = h || 'inicio'; return true }
-  // Endereços antigos da tela de pesquisa, que saiu: abrem a trilha.
-  if (h.split('/')[0] === 'pesquisa') { tela = 'trilha'; return true }
+  if (h === '' || h === 'inicio' || h === 'trilha' || h === 'pesquisa') { tela = h || 'inicio'; return true }
   tela = 'licao'
   const [id, i] = h.split('/')
   const l = LICOES.find((x) => x.id === id)
@@ -249,7 +249,7 @@ function mostrarResultado(box, tipo, msg, tecnico) {
     // Os papers do dia não têm ficha: o fim é implementar o núcleo e registrar no Caderno de Pesquisa.
     const n = add('p', '', 'resultado__nota')
     n.innerHTML = `Você implementou o núcleo de ${cap.paper.autores} (${cap.paper.ano}). Para registrar no Caderno de Pesquisa da Bragat: o núcleo numa frase, o número que se reproduziu e o que a sua pergunta mostrou.`
-    if (s) botao(`Ir para o Paper ${capSeg.n - 9}`, () => ir(...s))
+    if (s) botao(`Ir para o ${capSeg.titulo}`, () => ir(...s))
   } else if (cap.paper && (vaiParaDepois || fimDoCapitulo)) {
     // Num capítulo de paper não há aula: depois de implementar, vem a ficha do seu próprio paper.
     const n = add('p', '', 'resultado__nota')
@@ -286,7 +286,7 @@ function desenharPasso() {
   erros = 0
   document.title = `${licao.titulo} · Scaffold`
   const cap = capDe(licao)
-  $('#capitulo').textContent = cap.paper ? `${cap.titulo}: ${cap.paper.autores} (${cap.paper.ano})` : cap.titulo
+  $('#capitulo').textContent = cap.pesquisa ? `Pesquisa · ${cap.titulo}: ${cap.paper.autores} (${cap.paper.ano})` : cap.paper ? `${cap.titulo}: ${cap.paper.autores} (${cap.paper.ano})` : cap.titulo
   document.querySelectorAll('.aba').forEach((a) => {
     a.classList.toggle('aba--atual', a.dataset.parte === parte.id)
     const p = cap.partes.find((x) => x.id === a.dataset.parte)
@@ -496,6 +496,28 @@ function cartaoPaper(p) {
       </div>
     </article>`
 }
+function desenharPesquisa() {
+  $('#linha-pesquisa').innerHTML = PESQUISA.map((p, k) => {
+    const c = capN(p.n), tudo = c.partes.flatMap(licoesDa), [l, i] = primeiroPorFazer(tudo), ok = feito(tudo)
+    return `
+      <li class="linha__item linha__item--cap linha__item--paper linha__item--pronto${ok ? ' linha__item--feito' : ''}">
+        <span class="linha__no" aria-hidden="true">${ok ? '✓' : k + 1}</span>
+        <article class="cap">
+          <p class="cap__n">Paper ${k + 1} · ${p.data}</p>
+          <h3 class="cap__t">${p.titulo}</h3>
+          <p class="paper__ref"><a href="${p.url}" target="_blank" rel="noopener">${p.ref}</a></p>
+          <p class="aula__p">${p.constroi}</p>
+          <dl class="cap__partes" style="margin-top:14px">
+            ${c.partes.map((x) => `<div><dt>${x.titulo}</dt><dd>${x.modulos.map((m) => m.titulo).join(', ')}</dd>${barrinha(contar(licoesDa(x)))}</div>`).join('')}
+          </dl>
+          <div class="cap__acoes">
+            ${ok ? '<span class="selo selo--ok">Paper feito</span>' : `<a class="botao" href="#${l.id}/${i}">${contar(tudo).feitos ? 'Continuar' : 'Começar'}</a>`}
+            <button class="link" type="button" data-abrir-lista="${p.n}">Ver as lições</button>
+          </div>
+        </article>
+      </li>`
+  }).join('')
+}
 function desenharPapers() {
   $('#linha-papers').innerHTML = PAPERS.map((p) => {
     const ok = p.pronto && feito(capN(p.n).partes.flatMap(licoesDa))
@@ -520,6 +542,8 @@ function desenharTela() {
   $('.app').classList.toggle('app--fora', fora)
   $('#tela-inicio').hidden = tela !== 'inicio'
   $('#tela-trilha').hidden = tela !== 'trilha'
+  $('#tela-pesquisa').hidden = tela !== 'pesquisa'
+  $('#link-pesquisa').classList.toggle('topo__trilha--atual', tela === 'pesquisa')
   $('#tela-licao').hidden = fora
   $('#link-trilha').classList.toggle('topo__trilha--atual', tela === 'trilha')
   const o = onde()
@@ -527,7 +551,8 @@ function desenharTela() {
   $('#topo-seguir').href = o.href
   abrirLista(false)
   if (tela === 'inicio') { document.title = 'Scaffold'; desenharInicio() }
-  else if (tela === 'trilha') { document.title = 'A trilha · Scaffold'; desenharTrilha(); desenharPapers() }
+  else if (tela === 'trilha') { document.title = 'Engenharia · Scaffold'; desenharTrilha(); desenharPapers() }
+  else if (tela === 'pesquisa') { document.title = 'Pesquisa · Scaffold'; desenharPesquisa() }
   else { desenharPasso(); return }
   desenharLista()
   window.scrollTo(0, 0)

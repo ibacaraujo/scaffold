@@ -87,10 +87,131 @@ function controle(rotulo, min, max, passo, valor, aoMudar) {
   return l
 }
 
+// ── Pesquisa: a capa de um paper, com o método num desenho que se percorre em etapas.
+// O desenho é próprio (não é a figura do paper): segue o método do paper, etapa por etapa.
+const DESENHOS = {
+  // ACE-RL (Kim et al., 2026): o ator tenta, o refletor escreve notas, cada nota é testada num jogo novo,
+  // cada papel é comparado no seu grupo, e o melhor playbook vai para a próxima tentativa.
+  acerl(etapa) {
+    const C = { ok: '#a8e3c5', erro: '#f0a3a3', luz: OURO, apag: '#4f618f', caixa: '#24376c', txt: CURVA }
+    const on = (...es) => (es.includes(etapa) ? 1 : 0.28)
+    const t = (x, y, s, cor = C.txt, tam = 15, anc = 'middle', peso = 500) => `<text x="${x}" y="${y}" text-anchor="${anc}" fill="${cor}" font-size="${tam}" font-weight="${peso}" style="font-family:var(--sans)">${s}</text>`
+    const caixa = (x, y, w, h, rot, sub, op, destaque) => `<g opacity="${op}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="12" fill="${C.caixa}" stroke="${destaque ? C.luz : 'none'}" stroke-width="2"/>${t(x + w / 2, y + h / 2 + (sub ? -2 : 5), rot, '#fff', 16)}${sub ? t(x + w / 2, y + h / 2 + 16, sub, C.txt, 11.5, 'middle', 400) : ''}</g>`
+    const seta = (d, op, cor = EIXO, tr = '') => `<path d="${d}" fill="none" stroke="${cor}" stroke-width="2" opacity="${op}" marker-end="url(#ponta)" ${tr}/>`
+    const bola = (x, y, ok, op) => `<g opacity="${op}"><circle cx="${x}" cy="${y}" r="15" fill="${ok ? C.ok : C.erro}"/>${t(x, y + 5, ok ? '1' : '0', '#071131', 14, 'middle', 600)}</g>`
+    const ys = [70, 125, 180, 235]
+    const tent = [0, 1, 0, 0], novos = [1, 0, 1, 0], notas = ['lição', 'chute', 'lição', 'vazia']
+    const p = [`<defs><marker id="ponta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="${EIXO}"/></marker></defs>`]
+    p.push(caixa(14, 128, 84, 50, 'senha', 'a tarefa', 1, false))
+    p.push(caixa(130, 128, 84, 50, 'ator', 'o modelo', on(0, 4), etapa === 0 || etapa === 4))
+    ys.forEach((y, i) => p.push(seta(`M214 153 L${255} ${y}`, on(0) * 0.9 + 0.1)))
+    ys.forEach((y, i) => p.push(bola(272, y, tent[i], on(0, 3))))
+    p.push(t(272, 40, 'tentativas', C.txt, 12, 'middle', 400))
+    p.push(seta(`M288 235 L338 175`, on(1), etapa === 1 ? C.luz : EIXO))
+    p.push(caixa(340, 128, 92, 50, 'refletor', 'lê uma', on(1), etapa === 1))
+    ys.forEach((y) => p.push(seta(`M432 153 L${458} ${y}`, on(1))))
+    ys.forEach((y, i) => p.push(`<g opacity="${on(1, 2, 3)}"><rect x="460" y="${y - 14}" width="64" height="28" rx="7" fill="${C.caixa}" stroke="${etapa === 2 ? C.luz : 'none'}"/>${t(492, y + 5, notas[i], '#fff', 12.5)}</g>`))
+    p.push(t(492, 40, 'notas', C.txt, 12, 'middle', 400))
+    ys.forEach((y) => p.push(seta(`M524 ${y} L${566} ${y}`, on(2), etapa === 2 ? C.luz : EIXO)))
+    ys.forEach((y, i) => p.push(bola(588, y, novos[i], on(2, 3))))
+    p.push(t(588, 40, 'jogo novo', C.txt, 12, 'middle', 400))
+    if (etapa === 2) p.push(t(556, 286, 'V(P′) = R(τ̃)', C.luz, 16, 'middle', 600))
+    if (etapa === 3) {
+      p.push(`<rect x="250" y="48" width="44" height="210" rx="12" fill="none" stroke="${C.luz}" stroke-dasharray="6 5"/>`)
+      p.push(`<rect x="566" y="48" width="44" height="210" rx="12" fill="none" stroke="${C.luz}" stroke-dasharray="6 5"/>`)
+      p.push(`<rect x="452" y="48" width="80" height="210" rx="12" fill="none" stroke="#a9bdf5" stroke-dasharray="6 5"/>`)
+      p.push(t(430, 290, 'grupo do ator: os 8 jogos', C.luz, 13.5), t(492, 312, 'grupo do refletor: as 4 notas', '#a9bdf5', 13.5))
+    }
+    if (etapa === 4) {
+      // A nota que mais ajudou (a lição de cima, que levou o jogo novo a 1) volta para o ator.
+      p.push(`<circle cx="588" cy="70" r="21" fill="none" stroke="${C.luz}" stroke-width="2.5"/>`)
+      p.push(`<rect x="456" y="52" width="72" height="36" rx="9" fill="none" stroke="${C.luz}" stroke-width="2"/>`)
+      p.push(seta(`M588 92 C 600 330, 172 330, 172 182`, 1, C.luz))
+      p.push(t(380, 318, 'a nota que mais ajudou vai no playbook da próxima tentativa', C.luz, 13.5))
+    }
+    return p.join('')
+  },
+}
+
+function capaDoPaper(el, s, leitura) {
+  const caixa = document.createElement('div')
+  caixa.className = 'pc'
+  caixa.innerHTML = `<p class="pc__tag">${s.tag}</p><h3 class="pc__t">${s.titulo}</h3>
+    <p class="pc__a">${s.autores} · <a href="${s.url}" target="_blank" rel="noopener">abrir o paper</a></p>`
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  svg.setAttribute('viewBox', '0 0 640 330')
+  svg.setAttribute('class', 'pc__svg')
+  svg.setAttribute('role', 'img')
+  svg.setAttribute('aria-label', s.rotulo)
+  const etapas = document.createElement('div')
+  etapas.className = 'pc__etapas'
+  const fala = document.createElement('p')
+  fala.className = 'pc__fala'
+  fala.setAttribute('aria-live', 'polite')
+  let e = 0
+  const desenha = () => {
+    svg.innerHTML = DESENHOS[s.desenho](e)
+    fala.innerHTML = s.etapas[e][1]
+    etapas.querySelectorAll('button').forEach((b, i) => b.classList.toggle('pc__etapa--atual', i === e))
+  }
+  s.etapas.forEach(([nome], i) => {
+    const b = document.createElement('button')
+    b.type = 'button'
+    b.className = 'pc__etapa'
+    b.textContent = `${i + 1}. ${nome}`
+    b.onclick = () => { e = i; desenha() }
+    etapas.append(b)
+  })
+  caixa.append(svg, etapas, fala)
+  el.append(caixa)
+  desenha()
+}
+
+// ── O jogo da senha (Mastermind), para jogar com o mouse: 3 posições, 4 cores.
+const CORES_JOGO = ['#e5484d', '#3e63dd', '#30a46c', '#f5d90a']
+const NOMES_JOGO = ['vermelho', 'azul', 'verde', 'amarelo']
+function jogoDaSenha(el) {
+  const caixa = document.createElement('div')
+  caixa.className = 'jogo'
+  el.append(caixa)
+  let senha, palpite, hist
+  const sortear = () => { senha = [0, 1, 2].map(() => Math.floor(Math.random() * 4)); palpite = [0, 0, 0]; hist = []; desenha() }
+  const responder = (s, g) => {
+    const pretos = g.filter((c, i) => c === s[i]).length
+    const comuns = [0, 1, 2, 3].reduce((a, c) => a + Math.min(s.filter((x) => x === c).length, g.filter((x) => x === c).length), 0)
+    return [pretos, comuns - pretos]
+  }
+  const bolas = (g) => g.map((c) => `<span class="jogo__bola" style="background:${CORES_JOGO[c]}" title="${NOMES_JOGO[c]}"></span>`).join('')
+  function desenha() {
+    const ganhou = hist.length && hist[hist.length - 1][1][0] === 3
+    caixa.innerHTML = `<p class="pc__tag">Jogue: descubra a senha. Clique numa bola para trocar a cor.</p>
+      <div class="jogo__linha" id="jogo-palpite"></div>
+      <div class="jogo__linha"><button class="botao" type="button" id="jogo-ok"${ganhou ? ' disabled' : ''}>Dar o palpite</button><button class="link" type="button" id="jogo-novo" style="color:#a9bdf5">Nova senha</button></div>
+      <div class="jogo__hist">${hist.map(([g, [p, b]], i) => `<div class="jogo__linha"><span class="pc__a">${i + 1}.</span>${bolas(g)}<span class="jogo__res">${p} ${p === 1 ? 'preto' : 'pretos'}, ${b} ${b === 1 ? 'branco' : 'brancos'}</span></div>`).join('')}</div>
+      <p class="fig__leitura">${ganhou ? `Descobriu em ${hist.length} ${hist.length === 1 ? 'palpite' : 'palpites'}. O ator do paper tem só 3.` : hist.length ? 'Use as respostas: que senhas ainda combinam com todas elas?' : 'Pretos: cor certa no lugar certo. Brancos: cor certa no lugar errado.'}</p>`
+    const linha = caixa.querySelector('#jogo-palpite')
+    palpite.forEach((c, i) => {
+      const b = document.createElement('button')
+      b.type = 'button'
+      b.className = 'jogo__bola'
+      b.style.background = CORES_JOGO[c]
+      b.setAttribute('aria-label', `Posição ${i + 1}: ${NOMES_JOGO[c]}`)
+      b.onclick = () => { palpite[i] = (palpite[i] + 1) % 4; desenha() }
+      linha.append(b)
+    })
+    caixa.querySelector('#jogo-ok').onclick = () => { hist.push([[...palpite], responder(senha, palpite)]); desenha() }
+    caixa.querySelector('#jogo-novo').onclick = sortear
+  }
+  sortear()
+}
+
 export function montarFigura(el, s) {
   el.textContent = ''
   if (!s) { el.hidden = true; return }
   el.hidden = false
+
+  if (s.modo === 'paper') { capaDoPaper(el, s); return }
+  if (s.modo === 'senha') { jogoDaSenha(el); return }
 
   const leitura = document.createElement('p')
   leitura.className = 'fig__leitura'

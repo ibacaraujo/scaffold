@@ -124,11 +124,9 @@ export const TRILHA = [
   },
 ]
 
-// Depois do curso: papers. No curso, o Karpathy implementa papers aula a aula. Aqui o método continua:
-// ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e
-// fazer uma pergunta que o paper não fez. O Paper 1 ensina o método. Os seguintes são papers do dia,
-// escolhidos na leitura diária por importarem para a linha de pesquisa (LLMs, e a linguagem como
-// ferramenta de aprendizado, na linha de Vygotsky), um por dia.
+// Engenharia, depois do curso: papers. No curso, o Karpathy implementa papers aula a aula. Aqui o
+// método continua: ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade,
+// reproduzir um número e fazer uma pergunta que o paper não fez. O Paper 1 ensina o método.
 export const PAPERS = [
   {
     n: 10,
@@ -138,12 +136,18 @@ export const PAPERS = [
     url: 'https://arxiv.org/abs/2001.08361',
     constroi: 'O método inteiro num paper só: ler a equação, medir o expoente, refazer a reta da Figura 1 e uma pergunta própria.',
   },
+]
+
+// Pesquisa: os papers do dia. Um por dia, escolhidos na leitura diária por importarem para a linha de
+// pesquisa (LLMs, e a linguagem como ferramenta de aprendizado, na linha de Vygotsky). Cada um abre com
+// a capa do paper e o método num desenho, e termina com o núcleo implementado e uma pergunta própria.
+export const PESQUISA = [
   {
     n: 11,
-    pronto: true,
+    data: '13/11/2026',
     titulo: 'Notas para o eu futuro',
     ref: 'Kim, Jeon, Zhang & Yang (2026), Experience-Handoff Reinforcement Learning for Recursive Self-Improvement',
     url: 'https://arxiv.org/abs/2611.16409',
-    constroi: 'Paper de 13/11/2026. Um modelo que aprende a agir e a escrever a experiência que a próxima tentativa herda, num jogo de senha que roda no navegador. A pergunta própria: as notas viram fala interna?',
+    constroi: 'Um modelo que aprende a agir e a escrever a experiência que a próxima tentativa herda, num jogo de senha que roda no navegador. A pergunta própria: as notas viram fala interna?',
   },
 ]

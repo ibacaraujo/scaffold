@@ -8,11 +8,10 @@ Site estático, sem servidor: a matemática tem gráficos que se mexem e respost
 
 Para rodar localmente: `python3 -m http.server` nesta pasta.
 
-## Depois do curso: papers
+## Duas perspectivas
 
-No curso, o Karpathy implementa papers aula a aula. A trilha de papers continua esse método por conta própria: ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e fazer uma pergunta que o paper não fez.
+**Engenharia**: os capítulos antes de cada aula do curso e, depois do curso, o método para implementar papers. O Paper 1 de engenharia (`paper1.js`) ensina o método com Kaplan et al. (2020), *Scaling Laws for Neural Language Models*, e termina com uma ficha para aplicar o método a qualquer paper.
 
-O Paper 1 (`paper1.js`) ensina o método com Kaplan et al. (2020), *Scaling Laws for Neural Language Models*: ler a equação, conferir o ajuste log-log num caso com resposta conhecida, refazer a reta da Figura 1 com um modelo pequeno que roda no navegador e medir o que muda com poucos dados. A última parte é uma ficha para aplicar o método a qualquer paper.
+**Pesquisa** (Bragat Research): os papers do dia, um por dia, escolhidos pela linha de pesquisa (modelos de linguagem, e a linguagem como ferramenta de aprendizado, na linha de Vygotsky). Cada paper abre com a capa e o método num desenho que se percorre em etapas (`figuras.js`, modo `paper`), segue com a leitura do zero e termina com o núcleo implementado no estilo do Karpathy, um número reproduzido e uma pergunta própria. A lista fica em `PESQUISA`, em `trilha.js`.
 
-Os papers seguintes são papers do dia, um por dia, escolhidos pela linha de pesquisa (LLMs, e a linguagem como ferramenta de aprendizado, na linha de Vygotsky). O Paper 2 (`paper2.js`) é Kim et al. (2026), *Experience-Handoff Reinforcement Learning for Recursive Self-Improvement*: um ator e um refletor aprendem num Mastermind pequeno que roda no navegador, a nota vale o jogo que ela causa, e a pergunta própria testa se as notas são internalizadas. A lista fica em `PAPERS`, em `trilha.js`.
-
+O Paper 1 de pesquisa (`paper2.js`) é Kim et al. (2026), *Experience-Handoff Reinforcement Learning for Recursive Self-Improvement*: um ator e um refletor aprendem num Mastermind pequeno que roda no navegador (e que dá para jogar na lição, modo `senha`), a nota vale o jogo que ela causa, e a pergunta própria testa se as notas são internalizadas.

@@ -1,4 +1,4 @@
-// Paper 2: o primeiro paper do dia. O Scaffold registra, um por dia, papers da linha de pesquisa
+// Pesquisa, Paper 1: o primeiro paper do dia. O Scaffold registra, um por dia, papers da linha de pesquisa
 // (LLMs, e a linguagem como ferramenta de aprendizado, na linha de Vygotsky), implementados no
 // núcleo, de modo que a implementação ensine.
 //
@@ -149,7 +149,8 @@ const ex = (id, titulo, porque, passo) => ({ id, titulo, porque, passos: [passo]
 
 export const PAPER_2 = {
   n: 11,
-  titulo: 'Paper 2',
+  titulo: 'Paper 1',
+  pesquisa: true,
   paper: {
     titulo: 'Experience-Handoff Reinforcement Learning for Recursive Self-Improvement',
     autores: 'Kim et al.',
@@ -158,7 +159,7 @@ export const PAPER_2 = {
   },
   aula: 'https://arxiv.org/abs/2611.16409',
   semFicha: true,
-  intro: 'Um paper de sexta, 13/11/2026: um modelo que aprende a escrever notas para o seu eu futuro. Primeiro ler, do zero; depois implementar o núcleo, num jogo que roda no navegador.',
+  intro: 'Pesquisa, Paper 1 (13/11/2026): um modelo que aprende a escrever notas para o seu eu futuro. Primeiro a capa e o método num desenho; depois ler, do zero; por fim implementar o núcleo, num jogo que roda no navegador.',
   partes: [
     {
       id: 'matematica',
@@ -167,6 +168,44 @@ export const PAPER_2 = {
         {
           titulo: 'A ideia',
           licoes: [
+            {
+              id: 'p2-capa',
+              titulo: 'O paper num desenho',
+              porque: 'Antes de ler as páginas, vale ver o método inteiro de uma vez. O desenho ao lado é o método do paper em cinco etapas; clique em cada uma.',
+              passos: [
+                {
+                  texto: `<p>Este é o paper de hoje: <strong>Experience-Handoff Reinforcement Learning for Recursive Self-Improvement</strong>, de Doyoung Kim, Byeongguk Jeon, Kailin Zhang e Sherry Yang (NYU e KAIST), publicado no arXiv em 12 de novembro de 2026.</p>
+<p>A pergunta do paper cabe numa frase: <em>um modelo consegue aprender, só com o resultado das tarefas, a agir e também a escrever a experiência que o seu eu futuro vai herdar?</em></p>
+<p>Percorra as cinco etapas do desenho. Não precisa entender tudo agora: cada etapa vira uma lição, e depois uma linha de código.</p>`,
+                  figura: {
+                    modo: 'paper',
+                    desenho: 'acerl',
+                    tag: 'Pesquisa · Paper 1 · arXiv 2611.16409 · 12/11/2026',
+                    titulo: 'Experience-Handoff Reinforcement Learning for Recursive Self-Improvement',
+                    autores: 'Kim, Jeon, Zhang & Yang (NYU, KAIST)',
+                    url: 'https://arxiv.org/abs/2611.16409',
+                    rotulo: 'O método ACE-RL: o ator tenta, o refletor escreve notas, cada nota é testada num jogo novo, e cada papel é comparado no seu grupo.',
+                    etapas: [
+                      ['O ator tenta', 'O <strong>ator</strong> é o modelo resolvendo a tarefa. Ele tenta a mesma senha 4 vezes. Cada tentativa termina num número: 1 se acertou, 0 se não.'],
+                      ['O refletor escreve', 'O <strong>refletor</strong> é o mesmo modelo em outro papel. Ele lê uma das tentativas, aqui uma que falhou, e escreve 4 notas diferentes sobre ela.'],
+                      ['A nota é testada', 'Cada nota vai para um <strong>jogo novo</strong>. O valor da nota é o resultado desse jogo: <code>V(P′) = R(τ̃)</code>. Ninguém julga o texto; quem julga é o mundo.'],
+                      ['Cada um no seu grupo', 'As tentativas são comparadas com tentativas, e as notas com notas sobre a mesma tentativa. Assim uma tentativa ruim ainda pode render uma nota que vale 1.'],
+                      ['A próxima tentativa', 'A nota que mais ajudou entra no <strong>playbook</strong> da próxima tentativa. Treinado assim, o modelo melhora de uma tentativa para a outra: é o auto-aperfeiçoamento do título.'],
+                    ],
+                  },
+                  tarefa: 'Depois de percorrer as cinco etapas: o que decide se uma nota é boa?',
+                  opcoes: [
+                    { t: 'Um modelo maior lê a nota e dá uma nota de 0 a 10.', por: 'O paper não usa um juiz. Veja a etapa 3.' },
+                    { t: 'O resultado de um jogo novo que recebe a nota.', certa: true },
+                    { t: 'O tamanho da nota: notas mais longas trazem mais informação.', por: 'O tamanho não entra na conta. Veja a etapa 3.' },
+                  ],
+                  erro: 'Volte à etapa 3 do desenho.',
+                  dica: 'Na etapa 3, a seta sai de cada nota para um jogo.',
+                  solucao: 'O resultado de um jogo novo que recebe a nota: V(P′) = R(τ̃).',
+                  certo: 'Esse é o núcleo. As próximas lições constroem cada etapa do desenho a partir do zero.',
+                },
+              ],
+            },
             {
               id: 'p2-problema',
               titulo: 'O que se perde num número',
@@ -214,7 +253,9 @@ export const PAPER_2 = {
                   texto: `<p>Alguém escolhe uma <strong>senha</strong> secreta: uma sequência de cores. Você dá um <strong>palpite</strong> e recebe uma resposta com dois números:</p>
 <ul><li><strong>pretos</strong>: quantas cores estão certas e na posição certa;</li><li><strong>brancos</strong>: quantas cores estão na senha, mas em outra posição.</li></ul>
 <p>Aqui as senhas têm 3 posições e 4 cores, que vamos chamar de números: 0 é vermelho, 1 é azul, 2 é verde e 3 é amarelo.</p>
-<p>Exemplo: a senha é <code>(0, 1, 2)</code> e o palpite é <code>(0, 2, 3)</code>. O 0 está certo e no lugar certo: 1 preto. O 2 está na senha, mas em outro lugar: 1 branco. O 3 não está na senha.</p>`,
+<p>Exemplo: a senha é <code>(0, 1, 2)</code> e o palpite é <code>(0, 2, 3)</code>. O 0 está certo e no lugar certo: 1 preto. O 2 está na senha, mas em outro lugar: 1 branco. O 3 não está na senha.</p>
+<p>Ao lado, jogue algumas rodadas antes de responder.</p>`,
+                  figura: { modo: 'senha' },
                   tarefa: 'A senha é <code>(0, 1, 1)</code> e o palpite é <code>(1, 0, 1)</code>. Quantos pretos e quantos brancos?',
                   campos: [{ rotulo: 'pretos =', resposta: 1 }, { rotulo: 'brancos =', resposta: 2 }],
                   erro: 'Primeiro compare posição por posição. Depois conte as cores que sobraram em comum.',
