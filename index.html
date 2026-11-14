@@ -107,17 +107,6 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
 .resultado__tec { margin-top: 6px !important; font: 400 13px/1.5 var(--mono); color: var(--mute); overflow-wrap: anywhere; }
 .resultado .botao { margin-top: 14px; }
 
-/* as duas perspectivas, no início */
-.perspectivas { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 18px; }
-.perspectiva { display: grid; gap: 6px; padding: 24px 26px; border: 1px solid var(--rule); border-radius: 16px; color: var(--fg); text-decoration: none; }
-.perspectiva:hover { border-color: var(--sky); }
-.perspectiva p { margin: 0; color: var(--fg-2); }
-.perspectiva--pesquisa { background: var(--night-2); border-color: var(--night-2); }
-.perspectiva--pesquisa .cap__t, .perspectiva--pesquisa p { color: var(--night-fg); }
-.perspectiva--pesquisa .cap__n { color: #f5d78e; }
-.perspectiva .capa__link { color: var(--sky); margin-top: 6px; }
-.perspectiva--pesquisa .capa__link { color: #f5d78e; }
-
 /* a capa do paper e o jogo da senha (figuras da pesquisa) */
 .pc { display: grid; gap: 14px; padding: clamp(18px, 2vw, 28px); background: var(--night-2); color: var(--night-fg); border-radius: 16px; }
 .pc__tag { margin: 0; font: 500 13px var(--mono); color: #f5d78e; letter-spacing: .02em; }
@@ -129,14 +118,16 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
 .pc__etapa { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--night-rule); color: var(--night-mute); font-size: 14px; }
 .pc__etapa--atual { background: #f5d78e; border-color: #f5d78e; color: var(--night); font-weight: 500; }
 .pc__fala { margin: 0; font-size: 15.5px; line-height: 1.55; min-height: 4.7em; }
-.jogo { display: grid; gap: 14px; padding: clamp(18px, 2vw, 28px); background: var(--night-2); color: var(--night-fg); border-radius: 16px; }
-.jogo__linha { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.jogo__bola { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #fff3; }
-button.jogo__bola { cursor: pointer; }
-button.jogo__bola:hover { border-color: #fff; }
-.jogo__res { font: 500 15px var(--mono); color: #f5d78e; }
-.jogo__hist { display: grid; gap: 8px; }
-.jogo .botao { background: #eef2ff; color: var(--night-2); }
+.pc__fala code { background: #24376c; color: #fff; }
+.capa__lados { display: grid; gap: 18px; }
+.lado { display: grid; gap: 8px; padding: 22px 24px; border: 1px solid var(--night-rule); border-radius: 16px; background: var(--night-2); }
+.lado--pesquisa { border-color: #f5d78e66; }
+.lado__tag { margin: 0; font: 500 13px var(--mono); color: #f5d78e; }
+.lado__t { margin: 0; font-size: clamp(20px, 1.5vw, 26px); font-weight: 500; line-height: 1.2; color: #fff; letter-spacing: -.02em; }
+.lado__p { margin: 0; color: var(--night-fg); font-size: .92em; line-height: 1.55; }
+.lado__p a { color: #f5d78e; }
+.lado__onde { margin: 0; font-size: 14px; color: var(--night-mute); }
+.lado__acoes { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 6px; }
 
 /* matemática: o painel inteiro é usado */
 .pratica--mat { overflow-y: auto; padding: clamp(20px, 2.4vw, 44px); }
@@ -378,67 +369,39 @@ button.jogo__bola:hover { border-color: #fff; }
     <section class="capa">
       <div class="capa__in">
         <div class="capa__texto">
-          <p class="capa__sobre">Para acompanhar <a id="capa-curso" target="_blank" rel="noopener">Neural Networks: Zero to Hero</a>, de Andrej Karpathy</p>
-          <h1 class="capa__t">A matemática e a programação das redes neurais, começando do início.</h1>
-          <p class="capa__p">Lições curtas que preparam você para compreender cada aula do curso. Não é preciso saber nada antes: nem derivada, nem Python.</p>
-          <div class="capa__acoes">
-            <a class="botao botao--claro" id="capa-seguir" href="#">Começar</a>
-            <a class="capa__link" href="#trilha">Ver a trilha completa</a>
-          </div>
-          <p class="capa__onde" id="capa-onde" hidden></p>
+          <p class="capa__sobre">Scaffold · um projeto da Bragat</p>
+          <h1 class="capa__t">Engenharia e pesquisa em IA, do zero.</h1>
+          <p class="capa__p">Duas perspectivas no mesmo lugar. Na engenharia, construir redes neurais com o curso do Karpathy. Na pesquisa, ler a fronteira, um paper por dia, e implementar o núcleo de cada um.</p>
         </div>
-        <svg class="capa__fig" viewBox="0 0 420 320" aria-hidden="true">
-          <g stroke="#24376c" stroke-width="1">
-            <path d="M20 40H400M20 100H400M20 160H400M20 220H400M20 280H400M60 20V300M140 20V300M220 20V300M300 20V300M380 20V300"/>
-          </g>
-          <path d="M40 270 C 120 260, 170 230, 220 170 S 320 50, 400 40" fill="none" stroke="#a9bdf5" stroke-width="3"/>
-          <path d="M120 290 L 330 50" stroke="#f5d78e" stroke-width="2.5" stroke-dasharray="7 6"/>
-          <circle cx="222" cy="168" r="8" fill="#f5d78e"/>
-          <path d="M222 168 H 272 V 111" fill="none" stroke="#e6ebf8" stroke-width="1.5"/>
-          <text x="236" y="186" class="capa__fig-n">um passo</text>
-          <text x="280" y="144" class="capa__fig-n">quanto subiu</text>
-        </svg>
+        <div class="capa__lados">
+          <article class="lado">
+            <p class="lado__tag">Engenharia</p>
+            <h2 class="lado__t">O curso do Karpathy</h2>
+            <p class="lado__p">Um capítulo antes de cada aula de <a id="capa-curso" target="_blank" rel="noopener">Neural Networks: Zero to Hero</a>, com a matemática e a programação que ela usa. Não é preciso saber nada antes.</p>
+            <p class="lado__onde" id="capa-onde" hidden></p>
+            <div class="lado__acoes"><a class="botao botao--claro" id="capa-seguir" href="#">Começar</a><a class="capa__link" href="#trilha">A trilha</a></div>
+          </article>
+          <article class="lado lado--pesquisa">
+            <p class="lado__tag">Pesquisa · paper do dia</p>
+            <h2 class="lado__t" id="capa-pes-t"></h2>
+            <p class="lado__p" id="capa-pes-p"></p>
+            <div class="lado__acoes"><a class="botao botao--claro" id="capa-pes-seguir" href="#">Começar</a><a class="capa__link" href="#pesquisa">Todos os papers</a></div>
+          </article>
+        </div>
       </div>
-    </section>
-
-    <section class="faixa">
-      <h2 class="faixa__t">Duas perspectivas</h2>
-      <div class="perspectivas">
-        <a class="perspectiva" href="#trilha">
-          <p class="cap__n">Engenharia</p>
-          <h3 class="cap__t">O curso do Karpathy</h3>
-          <p>Um capítulo antes de cada aula de Neural Networks: Zero to Hero, com a matemática e a programação que ela usa. Depois do curso, o método para implementar papers.</p>
-          <span class="capa__link">Ver a trilha de engenharia</span>
-        </a>
-        <a class="perspectiva perspectiva--pesquisa" href="#pesquisa">
-          <p class="cap__n">Pesquisa</p>
-          <h3 class="cap__t">Os papers do dia</h3>
-          <p>Um paper por dia, da linha de pesquisa da Bragat: ler do zero, ver o método num desenho e implementar o núcleo no estilo do Karpathy, até uma pergunta que o paper não fez.</p>
-          <span class="capa__link">Ver os papers de pesquisa</span>
-        </a>
-      </div>
-    </section>
-
-    <section class="faixa">
-      <h2 class="faixa__t">Como funciona</h2>
-      <ol class="passos-capa">
-        <li><span class="passos-capa__n">1</span><h3>Um capítulo antes de cada aula</h3><p>Cada capítulo do Scaffold prepara exatamente o que a próxima aula do Karpathy vai usar. Você faz o capítulo, depois assiste à aula.</p></li>
-        <li><span class="passos-capa__n">2</span><h3>Matemática e programação</h3><p>São duas partes independentes. Comece pela que quiser: das variáveis à derivada, e do primeiro <code>print</code> às funções e listas.</p></li>
-        <li><span class="passos-capa__n">3</span><h3>Prática na hora</h3><p>Os gráficos se mexem, as respostas são conferidas na hora e o Python roda no navegador. Nada para instalar.</p></li>
-      </ol>
     </section>
 
     <section class="faixa faixa--cinza">
       <div class="agora">
         <div>
-          <h2 class="faixa__t">Onde você está</h2>
-          <p class="agora__p">O progresso fica guardado neste aparelho.</p>
+          <h2 class="faixa__t">Engenharia: onde você está</h2>
+          <p class="agora__p">O capítulo do curso em que você parou. O progresso fica guardado neste aparelho.</p>
         </div>
         <div class="agora__par" id="agora"></div>
       </div>
     </section>
 
-    <footer class="rodape">O Scaffold não é afiliado ao curso e não refaz as aulas: prepara a pessoa para compreendê-las. Um projeto da Bragat.</footer>
+    <footer class="rodape">Um projeto da Bragat. O Scaffold não é afiliado ao curso do Karpathy e não refaz as aulas: prepara a pessoa para compreendê-las.</footer>
   </main>
 
   <main class="tela" id="tela-trilha" hidden>

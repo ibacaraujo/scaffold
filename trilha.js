@@ -145,9 +145,9 @@ export const PESQUISA = [
   {
     n: 11,
     data: '13/11/2026',
-    titulo: 'Notas para o eu futuro',
-    ref: 'Kim, Jeon, Zhang & Yang (2026), Experience-Handoff Reinforcement Learning for Recursive Self-Improvement',
-    url: 'https://arxiv.org/abs/2611.16409',
-    constroi: 'Um modelo que aprende a agir e a escrever a experiência que a próxima tentativa herda, num jogo de senha que roda no navegador. A pergunta própria: as notas viram fala interna?',
+    titulo: 'O estado que volta',
+    ref: 'Huang, Dwivedi, Ma, Moreno & Liu (2026), Latent Feedback Is a Compute and Data Amplifier',
+    url: 'https://www.alphaxiv.org/abs/2611.latent-feedback-transformers-scaling-law',
+    constroi: 'Um modelo que devolve o estado da última camada para a letra seguinte, treinado em duas passadas, contra um que só repete os dados. A pergunta própria: esse estado funciona como uma fala interna, que guarda o sujeito?',
   },
 ]

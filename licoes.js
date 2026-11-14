@@ -558,11 +558,11 @@ if saida.strip().splitlines() != [str(i) for i in range(10)]:
 import { CAPITULO_2 } from './capitulo2.js'
 import { DEPOIS_1 } from './depois1.js'
 import { PAPER_1 } from './paper1.js'
-import { PAPER_2 } from './paper2.js'
+import { PESQUISA_1 } from './pesquisa1.js'
 // Os capítulos de paper vêm depois do curso e formam uma trilha à parte (têm o campo `paper`).
 export const CAPITULOS = [
   { n: 1, titulo: CAPITULO.titulo, aula: CAPITULO.aula, partes: [...PARTES, DEPOIS_1] },
   CAPITULO_2,
   PAPER_1,
-  PAPER_2,
+  PESQUISA_1,
 ]

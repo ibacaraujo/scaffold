@@ -85,7 +85,7 @@ function abrirPython() {
     if (data.tipo === 'pronto') { python = 'pronto'; mostrarEstadoPython() }
     else if (data.tipo === 'falhou') { python = 'falhou'; mostrarEstadoPython() }
     else if (data.id !== idAtual) return
-    else if (data.tipo === 'executando') { vigia = setTimeout(estourou, LIMITE_MS); aviso('Executando…') }
+    else if (data.tipo === 'executando') { vigia = setTimeout(estourou, passo().limite || LIMITE_MS); aviso('Executando…') }
     else if (data.tipo === 'resultado') { clearTimeout(vigia); terminou(data.res) }
   }
   worker.onerror = () => { python = 'falhou'; mostrarEstadoPython() }
@@ -99,7 +99,7 @@ function estourou() {
   abrirPython()
   fimDeRodada()
   $('#saida').textContent = ''
-  mostrarResultado($('#resultado'), 'erro', 'O código ficou executando por mais de 10 segundos e foi parado. Alguma repetição pode não ter fim.')
+  mostrarResultado($('#resultado'), 'erro', `O código ficou executando por mais de ${Math.round((passo().limite || LIMITE_MS) / 1000)} segundos e foi parado. Alguma repetição pode não ter fim.`)
 }
 const aviso = (t) => { $('#estado').textContent = t }
 
@@ -534,6 +534,12 @@ function desenharInicio() {
   $('#capa-seguir').href = o.href
   $('#capa-onde').hidden = !o.comecou || o.tipo === 'fim'
   $('#capa-onde').textContent = `Você parou em: Capítulo ${o.cap.n}, ${parteDe(o.l).titulo}, ${o.l.titulo}.`
+  // O paper do dia: o último da trilha de Pesquisa.
+  const pd = PESQUISA[PESQUISA.length - 1], cpd = capN(pd.n), tudo = cpd.partes.flatMap(licoesDa), [lp, ip] = primeiroPorFazer(tudo)
+  $('#capa-pes-t').textContent = `${pd.titulo} · ${pd.data}`
+  $('#capa-pes-p').innerHTML = `${pd.constroi} <a href="${pd.url}" target="_blank" rel="noopener">O paper.</a>`
+  $('#capa-pes-seguir').textContent = feito(tudo) ? 'Rever' : contar(tudo).feitos ? 'Continuar' : 'Começar'
+  $('#capa-pes-seguir').href = `#${lp.id}/${ip}`
   const t = TRILHA.find((x) => x.n === o.cap.n)
   $('#agora').innerHTML = cartaoCapitulo(t) + cartaoAula(t, false) + (licoesDepois(o.cap).length ? `<div class="agora__largo">${cartaoDepois(t)}</div>` : '')
 }
