@@ -90,26 +90,26 @@ function controle(rotulo, min, max, passo, valor, aoMudar) {
 // ── Pesquisa: a capa de um paper, com o método num desenho que se percorre em etapas.
 // O desenho é próprio (não é a figura do paper): segue o método do paper, etapa por etapa.
 const DESENHOS = {
-  // Feedback latente (Huang et al., 2026): o estado de cima de cada token entra na entrada do seguinte.
+  // Latent feedback (Huang et al., 2026): each token's top-layer state enters the next token's input. Research is in English.
   feedback(etapa) {
     const C = { luz: OURO, caixa: '#24376c', txt: CURVA, apag: 0.3 }
     const t = (x, y, s, cor = C.txt, tam = 15, anc = 'middle', peso = 500) => `<text x="${x}" y="${y}" text-anchor="${anc}" fill="${cor}" font-size="${tam}" font-weight="${peso}" style="font-family:var(--sans)">${s}</text>`
-    const xs = [130, 320, 510], letras = ['a', 'm', 'e']
+    const xs = [130, 320, 510], letras = ['c', 'a', 't']
     const p = [`<defs><marker id="ponta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="${EIXO}"/></marker><marker id="pontaL" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="${C.luz}"/></marker></defs>`]
     const fbOn = etapa >= 2 && etapa <= 3
     if (etapa === 3) {
       xs.forEach((x) => p.push(`<rect x="${x - 70}" y="96" width="140" height="${200}" rx="14" fill="none" stroke="#a9bdf5" stroke-dasharray="5 5" opacity=".7"/>`))
-      p.push(t(320, 318, '1ª passada: sem gradiente, só para obter os estados h', '#a9bdf5', 13.5))
-      p.push(t(320, 340, '2ª passada: com os estados no feedback, e o gradiente', C.luz, 13.5))
+      p.push(t(320, 318, 'pass 1: no gradient, only to get the states h', '#a9bdf5', 13.5))
+      p.push(t(320, 340, 'pass 2: with the states fed back, and the gradient', C.luz, 13.5))
     }
     xs.forEach((x, i) => {
       p.push(`<path d="M${x} 252 L${x} 214" stroke="${EIXO}" stroke-width="2" marker-end="url(#ponta)"/>`)
       p.push(`<path d="M${x} 136 L${x} 104" stroke="${EIXO}" stroke-width="2" marker-end="url(#ponta)"/>`)
       p.push(`<rect x="${x - 34}" y="252" width="68" height="34" rx="9" fill="${C.caixa}"/>${t(x, 275, letras[i], '#fff', 18, 'middle', 600)}`)
-      p.push(`<rect x="${x - 56}" y="138" width="112" height="74" rx="12" fill="${C.caixa}"/>${t(x, 172, 'camadas', '#fff', 15)}${t(x, 192, 'do modelo', C.txt, 12, 'middle', 400)}`)
+      p.push(`<rect x="${x - 56}" y="138" width="112" height="74" rx="12" fill="${C.caixa}"/>${t(x, 172, 'layers', '#fff', 15)}${t(x, 192, 'of the model', C.txt, 12, 'middle', 400)}`)
       const hl = etapa === 1 || fbOn
       p.push(`<circle cx="${x}" cy="84" r="20" fill="${hl ? C.luz : '#4f618f'}"/>${t(x, 90, 'h', hl ? '#071131' : '#fff', 17, 'middle', 600)}`)
-      p.push(t(x, 40, 'prevê a próxima', C.txt, 12, 'middle', 400))
+      p.push(t(x, 40, 'predicts the next', C.txt, 12, 'middle', 400))
       p.push(`<path d="M${x} 62 L${x} 48" stroke="${EIXO}" stroke-width="1.5"/>`)
       if (i < 2) {
         const op = fbOn ? 1 : etapa === 0 ? 0 : 0.15
@@ -117,9 +117,9 @@ const DESENHOS = {
         if (fbOn) p.push(t(x + 70, 238, 'W rms(h)', C.luz, 13, 'middle', 600))
       }
     })
-    if (etapa === 0) p.push(t(320, 324, 'cada letra recomeça de baixo; o estado h é jogado fora', C.txt, 13.5))
-    if (etapa === 1) p.push(t(320, 324, 'h: o estado da última camada, o resumo mais trabalhado', C.luz, 13.5))
-    if (etapa === 2) p.push(t(320, 324, 'u = e + W rms(h anterior): cada letra começa sabendo o que a anterior concluiu', C.luz, 13.5))
+    if (etapa === 0) p.push(t(320, 324, 'each token starts again from the bottom; the state h is thrown away', C.txt, 13.5))
+    if (etapa === 1) p.push(t(320, 324, 'h: the last layer\'s state, the most processed summary', C.luz, 13.5))
+    if (etapa === 2) p.push(t(320, 324, 'u = e + W rms(previous h): each token starts knowing what the last one concluded', C.luz, 13.5))
     if (etapa === 4) {
       p.length = 1
       const bar = (y, rot, partes) => {
@@ -131,12 +131,12 @@ const DESENHOS = {
           x += w + 4
         }
       }
-      p.push(t(320, 50, 'a mesma computação, gasta de dois jeitos', C.txt, 15))
-      bar(90, 'sem feedback', [[205, '#a9bdf5', '1ª época'], [205, '#a9bdf5', '2ª época']])
-      bar(160, 'com feedback', [[170, OURO, '1ª época'], [50, '#f0d0a0', 'extra'], [120, OURO, '2ª (parte)'], [30, '#f0d0a0', '']])
-      p.push(t(320, 240, 'mais épocas: cada repetição vale menos', '#a9bdf5', 13.5))
-      p.push(t(320, 265, 'feedback: menos épocas, mais trabalho por palavra', C.luz, 13.5))
-      p.push(t(320, 310, 'com dados repetidos, o feedback chega à mesma perda com até 48% menos computação', '#fff', 13.5))
+      p.push(t(320, 50, 'the same compute, spent two ways', C.txt, 15))
+      bar(90, 'Transformer', [[205, '#a9bdf5', 'epoch 1'], [205, '#a9bdf5', 'epoch 2']])
+      bar(160, 'latent feedback', [[170, OURO, 'epoch 1'], [50, '#f0d0a0', 'extra'], [120, OURO, 'epoch 2 (part)'], [30, '#f0d0a0', '']])
+      p.push(t(320, 240, 'more epochs: each repeat is worth less', '#a9bdf5', 13.5))
+      p.push(t(320, 265, 'feedback: fewer epochs, more work per token', C.luz, 13.5))
+      p.push(t(320, 310, 'on repeated data, feedback reaches the same loss with up to 48% less compute', '#fff', 13.5))
     }
     return p.join('')
   },
@@ -146,7 +146,7 @@ function capaDoPaper(el, s, leitura) {
   const caixa = document.createElement('div')
   caixa.className = 'pc'
   caixa.innerHTML = `<p class="pc__tag">${s.tag}</p><h3 class="pc__t">${s.titulo}</h3>
-    <p class="pc__a">${s.autores} · <a href="${s.url}" target="_blank" rel="noopener">abrir o paper</a></p>`
+    <p class="pc__a">${s.autores} · <a href="${s.url}" target="_blank" rel="noopener">${s.abrir || 'abrir o paper'}</a></p>`
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   svg.setAttribute('viewBox', '0 0 640 350')
   svg.setAttribute('class', 'pc__svg')
@@ -176,13 +176,13 @@ function capaDoPaper(el, s, leitura) {
   desenha()
 }
 
-// ── O valor de cada época repetida: a época k vale e^(−(k−1)/R*) de uma leitura nova (Muennighoff et al., 2023).
+// ── The worth of each repeated epoch: epoch k is worth e^(−(k−1)/R*) of a fresh one (Muennighoff et al., 2023). Research, in English.
 function valorDasEpocas(el, s) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`)
   svg.setAttribute('class', 'fig__svg')
   svg.setAttribute('role', 'img')
-  svg.setAttribute('aria-label', 'Barras com o valor de cada época repetida')
+  svg.setAttribute('aria-label', 'Bars with the worth of each repeated epoch')
   const controles = document.createElement('div')
   controles.className = 'fig__controles'
   const leitura = document.createElement('p')
@@ -199,14 +199,14 @@ function valorDasEpocas(el, s) {
       const v = Math.exp(-(k - 1) / r), h = v * 210, x = 40 + passo * (k - 1) + 9
       soma += v
       p.push(`<rect x="${x}" y="${280 - h}" width="${larg}" height="${h}" rx="6" fill="${k === 1 ? '#a9bdf5' : OURO}"/>`)
-      p.push(txt(x + larg / 2, 270 - h, fmt(v), '#fff'), txt(x + larg / 2, 304, `${k}ª`, CURVA, 14))
+      p.push(txt(x + larg / 2, 270 - h, v.toFixed(3), '#fff'), txt(x + larg / 2, 304, `${k}`, CURVA, 14))
     }
-    p.push(txt(W / 2, 334, 'época', EIXO, 13))
+    p.push(txt(W / 2, 334, 'epoch', EIXO, 13))
     svg.innerHTML = p.join('')
-    leitura.textContent = `${n} ${n === 1 ? 'época vale' : 'épocas valem'}, juntas, ${fmt(soma)} leituras novas.`
+    leitura.textContent = `${n} ${n === 1 ? 'epoch is' : 'epochs are'} worth ${soma.toFixed(3)} fresh epochs in total.`
   }
-  controles.append(controle('R*: o quão devagar o valor cai', 0.5, 10, 0.5, r, (v) => { r = v; desenha() }))
-  controles.append(controle('Número de épocas', 1, 8, 1, n, (v) => { n = v; desenha() }))
+  controles.append(controle('R*: how slowly the worth decays', 0.5, 10, 0.5, r, (v) => { r = v; desenha() }))
+  controles.append(controle('Number of epochs', 1, 8, 1, n, (v) => { n = v; desenha() }))
   desenha()
 }
 

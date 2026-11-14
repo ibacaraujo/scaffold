@@ -144,10 +144,10 @@ export const PAPERS = [
 export const PESQUISA = [
   {
     n: 11,
-    data: '13/11/2026',
-    titulo: 'O estado que volta',
-    ref: 'Huang, Dwivedi, Ma, Moreno & Liu (2026), Latent Feedback Is a Compute and Data Amplifier',
+    data: 'Nov 13, 2026',
+    titulo: 'Latent Feedback Is a Compute and Data Amplifier',
+    ref: 'Huang, Dwivedi, Ma, Moreno & Liu (2026)',
     url: 'https://www.alphaxiv.org/abs/2611.latent-feedback-transformers-scaling-law',
-    constroi: 'Um modelo que devolve o estado da última camada para a letra seguinte, treinado em duas passadas, contra um que só repete os dados. A pergunta própria: esse estado funciona como uma fala interna, que guarda o sujeito?',
+    constroi: 'Feed each token\'s top-layer state into the next token\'s input, train with two passes, and compare against a Transformer that spends the same compute on more epochs. Own question: does that state act like inner speech that keeps the subject?',
   },
 ]

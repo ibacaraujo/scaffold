@@ -1,112 +1,111 @@
-// Pesquisa, Paper 1: o primeiro paper do dia (13/11/2026). A trilha de Pesquisa registra, um por dia,
-// papers da linha de pesquisa (modelos de linguagem, e a linguagem como ferramenta de aprendizado, na
-// linha de Vygotsky), implementados no núcleo, de modo que a implementação ensine.
+// Research, Paper 1: the first paper of the day (Nov 13, 2026). The Research track is in English. It
+// records, one per day, papers from the research line (language models, and language as a tool for
+// learning, in the spirit of Vygotsky), implemented at their core so that the implementation teaches.
 //
-// O paper: Huang, Dwivedi, Ma, Moreno & Liu (2026), "Latent Feedback Is a Compute and Data Amplifier:
+// The paper: Huang, Dwivedi, Ma, Moreno & Liu (2026), "Latent Feedback Is a Compute and Data Amplifier:
 // Scaling Law for Latent Feedback Transformers on Repeated Data" (Institute of Foundation Models, USC,
-// CMU), publicado no alphaXiv em 13/11/2026. O núcleo: o estado da camada de cima de cada token entra
-// na entrada do token seguinte por um mapa W (equação 1), treinado com duas passadas, a primeira sem
-// gradiente (equação 2 e Algoritmo 1). Quando os dados se repetem, isso rende mais que treinar mais
-// épocas com a mesma computação.
+// CMU), published on alphaXiv on Nov 13, 2026. The core: each token's top-layer state enters the next
+// token's input through a map W (equation 1), trained with two passes, the first without gradient
+// (equation 2 and Algorithm 1). On repeated data, this beats spending the same compute on more epochs.
 //
-// Aqui tudo roda no navegador, com numpy e backprop escrito à mão. O Transformer vira um MLP com uma
-// janela de 3 letras, como o do makemore (a linha de base que o curso já construiu), e o texto é uma
-// língua pequena e inventada, repetida por muitas épocas. A primeira passada é feita letra por letra,
-// o que dá exatamente os estados de quem decodifica (o ponto fixo da equação 2). O que se reproduz é a
-// forma do resultado: com a mesma computação, o modelo com feedback fica abaixo do modelo sem feedback.
+// Everything runs in the browser, with numpy and a hand-written backward pass. The Transformer becomes
+// an MLP with a 3-letter window, like the one in makemore (the baseline the course already built), and
+// the text is a tiny made-up language, repeated for many epochs. The first pass runs letter by letter,
+// which gives exactly the decoding states (the fixed point of equation 2). What reproduces is the shape
+// of the result: at equal compute, the model with feedback ends below the one without.
 
-// Cada passo de código roda sozinho, então cada um traz o que precisa. Os blocos abaixo são somados.
-const DADOS = `import numpy as np
+// Each code step runs on its own, so each one carries what it needs. The blocks below add up.
+const DATA = `import numpy as np
 
-# Uma língua pequena: frases em que o fim concorda com o sujeito do começo.
-def frases(n, semente):
-    r = np.random.default_rng(semente)
-    sujeitos = [('o menino', 'o'), ('a menina', 'a'), ('o gato', 'o'), ('a gata', 'a'), ('o pai', 'o'), ('a mae', 'a')]
-    objetos = ['o bolo', 'a bola', 'o rio', 'a lua', 'o sol', 'a casa']
-    verbos = ['viu', 'quis', 'pegou', 'achou']
-    fins = ['cansad', 'content', 'molhad', 'calad']
-    texto = ''
+# A tiny language: sentences whose pronoun agrees with the subject at the start.
+def sentences(n, seed):
+    r = np.random.default_rng(seed)
+    subjects = [('the boy', 'he'), ('the girl', 'she'), ('the king', 'he'), ('the queen', 'she'), ('the father', 'he'), ('the mother', 'she')]
+    objects = ['the cake', 'the ball', 'the river', 'the moon', 'the sun', 'the house']
+    verbs = ['saw', 'wanted', 'took', 'found']
+    ends = ['tired', 'happy', 'wet', 'quiet']
+    text = ''
     for _ in range(n):
-        s, g = sujeitos[r.integers(6)]
-        meio = ' e '.join(verbos[r.integers(4)] + ' ' + objetos[r.integers(6)] for _ in range(r.integers(1, 3)))
-        texto += s + ' ' + meio + ' e ficou ' + fins[r.integers(4)] + g + '. '
-    return texto
+        s, pronoun = subjects[r.integers(6)]
+        middle = ' and '.join(verbs[r.integers(4)] + ' ' + objects[r.integers(6)] for _ in range(r.integers(1, 3)))
+        text += s + ' ' + middle + ' and then ' + pronoun + ' was ' + ends[r.integers(4)] + '. '
+    return text
 
-texto_treino = frases(150, 1)   # os dados únicos, que vão se repetir a cada época
-texto_valid = frases(150, 2)    # frases novas, só para medir
-letras = sorted(set(texto_treino + texto_valid))
-V = len(letras)
-idx = {c: i for i, c in enumerate(letras)}
+text_train = sentences(150, 1)   # the unique data, repeated every epoch
+text_valid = sentences(150, 2)   # new sentences, only for measuring
+chars = sorted(set(text_train + text_valid))
+V = len(chars)
+stoi = {c: i for i, c in enumerate(chars)}
 `
 
-const CODIFICAR = `treino = np.array([idx[c] for c in texto_treino])
-valid = np.array([idx[c] for c in texto_valid])
+const ENCODE = `train_data = np.array([stoi[c] for c in text_train])
+valid_data = np.array([stoi[c] for c in text_valid])
 `
 
-const modelo = (linhaH) => `
-K, D, H = 3, 12, 64   # a janela tem 3 letras; cada letra vira 12 números; o estado tem 64
+const model = (lineH) => `
+K, D, H = 3, 12, 64   # the window has 3 letters; each letter becomes 12 numbers; the state has 64
 
-def iniciar(semente):
-    r = np.random.default_rng(semente)
+def init(seed):
+    r = np.random.default_rng(seed)
     return {'E': r.normal(0, 0.3, (V, D)),
             'W1': r.normal(0, 1 / np.sqrt(K * D), (K * D, H)), 'b1': np.zeros(H),
             'W2': r.normal(0, 1 / np.sqrt(H), (H, V)) * 0.5, 'b2': np.zeros(V),
-            'Wf': r.normal(0, 0.02, (H, K * D))}   # o mapa W do feedback
+            'Wf': r.normal(0, 0.02, (H, K * D))}   # the feedback map W
 
-def janelas(seq, pos):
-    # as 3 letras antes de cada posição
+def windows(seq, pos):
+    # the 3 letters before each position
     return np.stack([seq[pos - K + j] for j in range(K)], -1)
 
 def rms(h):
     return h / np.sqrt((h ** 2).mean(-1, keepdims=True) + 1e-6)
 
-def adiante(P, ctx, fb):
-    e = P['E'][ctx].reshape(*ctx.shape[:2], K * D)    # as 3 letras da janela, lado a lado
-    u = e + rms(fb) @ P['Wf']                         # a entrada: as letras mais o feedback
-${linhaH}
-    logits = h @ P['W2'] + P['b2']                    # uma nota para cada letra possível
+def forward(P, ctx, fb):
+    e = P['E'][ctx].reshape(*ctx.shape[:2], K * D)    # the 3 window letters, side by side
+    u = e + rms(fb) @ P['Wf']                         # the input: the letters plus the feedback
+${lineH}
+    logits = h @ P['W2'] + P['b2']                    # one score for each possible letter
     return e, u, h, logits
 `
-const H_CERTO = `    h = np.tanh(u @ P['W1'] + P['b1'])                # o estado de cima`
-const MODELO = modelo(H_CERTO)
+const H_RIGHT = `    h = np.tanh(u @ P['W1'] + P['b1'])                # the top-layer state`
+const MODEL = model(H_RIGHT)
 
-const estadosCom = (linha) => `
-def estados(P, ctx):
-    # A primeira passada, letra por letra: o estado de cima de cada letra entra na seguinte.
+const statesWith = (line) => `
+def states(P, ctx):
+    # The first pass, letter by letter: each letter's top state enters the next one.
     B, T, _ = ctx.shape
     e = P['E'][ctx].reshape(B, T, K * D)
     h = np.zeros((B, H))
     hs = np.zeros((B, T, H))
     for t in range(T):
-${linha}
+${line}
         hs[:, t] = h
     return hs
 
-def deslocar(h):
-    # a letra t recebe o estado da letra t - 1; a primeira recebe zeros
+def shift(h):
+    # letter t receives the state of letter t - 1; the first one receives zeros
     z = np.zeros_like(h)
     z[:, 1:] = h[:, :-1]
     return z
 `
-const ESTADO_CERTO = `        h = np.tanh((e[:, t] + rms(h) @ P['Wf']) @ P['W1'] + P['b1'])`
-const ESTADOS = estadosCom(ESTADO_CERTO)
+const STATE_RIGHT = `        h = np.tanh((e[:, t] + rms(h) @ P['Wf']) @ P['W1'] + P['b1'])`
+const STATES = statesWith(STATE_RIGHT)
 
-const passoCom = (linhaFb) => `
-def passo(P, seq, rng, feedback, lr, B=32, T=24):
-    inicio = rng.integers(K, len(seq) - T - 1, B)
-    pos = inicio[:, None] + np.arange(T)[None]
-    ctx, y = janelas(seq, pos), seq[pos]
+const stepWith = (lineFb) => `
+def step(P, seq, rng, feedback, lr, B=32, T=24):
+    start = rng.integers(K, len(seq) - T - 1, B)
+    pos = start[:, None] + np.arange(T)[None]
+    ctx, y = windows(seq, pos), seq[pos]
     fb = np.zeros((B, T, H))
-    if feedback and rng.random() > 0.15:      # p = 0,15: às vezes, uma passada só
-${linhaFb}
-    e, u, h, lg = adiante(P, ctx, fb)          # a 2a passada: só nela há gradiente
-    # A perda: o -log da probabilidade da letra certa.
+    if feedback and rng.random() > 0.15:      # p = 0.15: sometimes, a single pass
+${lineFb}
+    e, u, h, lg = forward(P, ctx, fb)          # pass 2: the only one with gradient
+    # The loss: -log of the probability of the right letter.
     lg = lg - lg.max(-1, keepdims=True)
     p = np.exp(lg)
     p /= p.sum(-1, keepdims=True)
     n = B * T
-    perda = -np.log(p.reshape(n, V)[np.arange(n), y.reshape(n)]).mean()
-    # O backprop, à mão, de trás para a frente (como no micrograd, só que com matrizes).
+    loss = -np.log(p.reshape(n, V)[np.arange(n), y.reshape(n)]).mean()
+    # The backward pass, by hand, from the end to the start (like micrograd, with matrices).
     dl = p.reshape(n, V).copy()
     dl[np.arange(n), y.reshape(n)] -= 1
     dl /= n
@@ -116,34 +115,34 @@ ${linhaFb}
     g['W1'] = u.reshape(n, -1).T @ dh
     g['b1'] = dh.sum(0)
     du = dh @ P['W1'].T
-    g['Wf'] = rms(fb).reshape(n, H).T @ du    # o feedback entra como uma entrada fixa
+    g['Wf'] = rms(fb).reshape(n, H).T @ du    # the feedback enters as a fixed input
     g['E'] = np.zeros_like(P['E'])
     np.add.at(g['E'], ctx.reshape(n, K), du.reshape(n, K, D))
     for k in P:
         P[k] -= lr * g[k]
-    return perda
+    return loss
 
-def treinar(feedback, passos, semente=0, lr=0.5):
-    P = iniciar(semente)
-    rng = np.random.default_rng(semente + 10)
-    curva = []
-    for t in range(passos):
-        curva.append(passo(P, treino, rng, feedback, lr * (1 - 0.9 * t / passos)))
-    return P, curva
+def train(feedback, steps, seed=0, lr=0.5):
+    P = init(seed)
+    rng = np.random.default_rng(seed + 10)
+    curve = []
+    for t in range(steps):
+        curve.append(step(P, train_data, rng, feedback, lr * (1 - 0.9 * t / steps)))
+    return P, curve
 
-def perdas(P, seq, feedback):
-    # A perda em cada letra do texto, decodificando letra por letra.
+def losses(P, seq, feedback):
+    # The loss at each letter of a text, decoding letter by letter.
     pos = np.arange(K, len(seq))
-    ctx = janelas(seq, pos)[None]
-    fb = deslocar(estados(P, ctx)) if feedback else np.zeros((1, len(pos), H))
-    _, _, _, lg = adiante(P, ctx, fb)
+    ctx = windows(seq, pos)[None]
+    fb = shift(states(P, ctx)) if feedback else np.zeros((1, len(pos), H))
+    _, _, _, lg = forward(P, ctx, fb)
     lg = lg[0] - lg[0].max(-1, keepdims=True)
     lp = lg - np.log(np.exp(lg).sum(-1, keepdims=True))
     return -lp[np.arange(len(pos)), seq[pos]]
 `
-const FB_CERTO = `        fb = deslocar(estados(P, ctx))         # a 1a passada: sem gradiente`
-const TREINO = passoCom(FB_CERTO)
-const TUDO = DADOS + CODIFICAR + MODELO + ESTADOS + TREINO
+const FB_RIGHT = `        fb = shift(states(P, ctx))              # pass 1: no gradient`
+const TRAIN = stepWith(FB_RIGHT)
+const ALL = DATA + ENCODE + MODEL + STATES + TRAIN
 
 const ex = (id, titulo, porque, passo) => ({ id, titulo, porque, passos: [passo] })
 
@@ -159,146 +158,147 @@ export const PESQUISA_1 = {
     url: 'https://www.alphaxiv.org/abs/2611.latent-feedback-transformers-scaling-law',
   },
   aula: 'https://www.alphaxiv.org/abs/2611.latent-feedback-transformers-scaling-law',
-  intro: 'Pesquisa, Paper 1 (13/11/2026): um Transformer que devolve o próprio estado para a letra seguinte, e por que isso rende mais quando os dados acabam. Primeiro a capa e o método num desenho; depois ler, do zero; por fim implementar o núcleo, no navegador.',
+  intro: 'Research, Paper 1 (Nov 13, 2026): Latent Feedback Is a Compute and Data Amplifier. First the cover and the method in a diagram; then the paper, read from scratch; then the core, implemented in the browser.',
   partes: [
     {
       id: 'matematica',
-      titulo: 'Ler o paper',
+      titulo: 'Read the paper',
       modulos: [
         {
-          titulo: 'A ideia',
+          titulo: 'The idea',
           licoes: [
             {
               id: 'r1-capa',
-              titulo: 'O paper num desenho',
-              porque: 'Antes das páginas, o método inteiro de uma vez. O desenho ao lado é o paper em cinco etapas; clique em cada uma.',
+              titulo: 'The paper in one diagram',
+              porque: 'Before the pages, the whole method at once. The diagram is the paper in five stages; click each one.',
               passos: [
                 {
-                  texto: `<p>O paper de hoje: <strong>Latent Feedback Is a Compute and Data Amplifier</strong>, de Benhao Huang, Chaitanya Dwivedi, Xuezhe Ma, Alexander Moreno e Hector Liu (Institute of Foundation Models, USC e CMU), publicado em 13 de novembro de 2026.</p>
-<p>A pergunta cabe numa frase: <em>quando os dados bons acabam, vale mais treinar de novo nos mesmos dados ou deixar o modelo devolver o próprio estado para a palavra seguinte?</em></p>
-<p>Percorra as cinco etapas do desenho. Cada uma vira uma lição, e depois uma linha de código.</p>`,
+                  texto: `<p>Today's paper: <strong>Latent Feedback Is a Compute and Data Amplifier</strong>, by Benhao Huang, Chaitanya Dwivedi, Xuezhe Ma, Alexander Moreno and Hector Liu (Institute of Foundation Models, USC and CMU), published on November 13, 2026.</p>
+<p>Its question fits in one sentence: <em>when good data runs out, is it better to train on the same data again, or to let the model feed its own state into the next token?</em></p>
+<p>Go through the five stages of the diagram. Each one becomes a lesson, and then a line of code.</p>`,
                   figura: {
                     modo: 'paper',
                     desenho: 'feedback',
-                    tag: 'Pesquisa · Paper 1 · 13/11/2026',
+                    tag: 'Research · Paper 1 · Nov 13, 2026',
                     titulo: 'Latent Feedback Is a Compute and Data Amplifier',
                     autores: 'Huang, Dwivedi, Ma, Moreno & Liu (IFM, USC, CMU)',
+                    abrir: 'open the paper',
                     url: 'https://www.alphaxiv.org/abs/2611.latent-feedback-transformers-scaling-law',
-                    rotulo: 'O Transformer com feedback latente: o estado de cima de cada token entra na entrada do token seguinte, por um mapa W.',
+                    rotulo: 'The latent feedback Transformer: each token\'s top-layer state enters the next token\'s input through a map W.',
                     etapas: [
-                      ['Um Transformer comum', 'Cada token entra embaixo, passa pelas camadas e sai em cima como um <strong>estado</strong>, <code>h</code>. Do estado sai a previsão do próximo token. Depois disso, o estado é jogado fora.'],
-                      ['O estado de cima', 'O estado <code>h</code> da última camada é o resumo mais trabalhado que o modelo tem daquele ponto do texto. Ele já passou por todas as camadas.'],
-                      ['O feedback', 'A ideia do paper: em vez de jogar o estado fora, ele entra na <strong>entrada</strong> do token seguinte, por um mapa <code>W</code>: <code>u<sub>t</sub> = e<sub>t</sub> + W rms(h<sub>t−1</sub>)</code>. Cada token começa sabendo o que o anterior concluiu.'],
-                      ['Duas passadas', 'No treino, os estados de cima ainda não existem. Então o modelo roda <strong>duas vezes</strong>: a primeira, sem gradiente, só para obter os estados; a segunda, com eles, para aprender. Isso custa cerca de 1,2 vez o treino comum.'],
-                      ['Quando os dados acabam', 'A comparação justa: com a mesma computação, o Transformer comum treina mais épocas nos mesmos dados, e o com feedback treina menos épocas. Quando os dados se repetem, o feedback chega à mesma perda com até <strong>48% menos computação</strong>.'],
+                      ['A plain Transformer', 'Each token enters at the bottom, goes through the layers and comes out on top as a <strong>state</strong>, <code>h</code>. The prediction of the next token comes from that state. Then the state is thrown away.'],
+                      ['The top-layer state', 'The state <code>h</code> of the last layer is the most processed summary the model has of that point in the text. It has already gone through every layer.'],
+                      ['The feedback', 'The paper\'s idea: instead of throwing the state away, feed it into the next token\'s <strong>input</strong>, through a map <code>W</code>: <code>u<sub>t</sub> = e<sub>t</sub> + W rms(h<sub>t−1</sub>)</code>. Each token starts out knowing what the previous one concluded.'],
+                      ['Two passes', 'During training, the top states do not exist yet. So the model runs <strong>twice</strong>: the first pass, without gradient, only to get the states; the second, with them, to learn. This costs about 1.2 times plain training.'],
+                      ['When data runs out', 'The fair comparison: with the same compute, the plain Transformer trains more epochs on the same data, and the feedback model trains fewer. On repeated data, feedback reaches the same loss with up to <strong>48% less compute</strong>.'],
                     ],
                   },
-                  tarefa: 'Depois de percorrer as cinco etapas: o que entra na entrada de um token, além dele mesmo?',
+                  tarefa: 'After going through the five stages: besides the token itself, what enters a token\'s input?',
                   opcoes: [
-                    { t: 'O token seguinte, para o modelo espiar o futuro.', por: 'O modelo nunca vê o futuro: é isso que ele tenta prever. Veja a etapa 3.' },
-                    { t: 'O estado de cima do token anterior, passado por um mapa W.', certa: true },
-                    { t: 'Uma cópia de todos os pesos do modelo.', por: 'Os pesos não entram na entrada. Veja a etapa 3.' },
+                    { t: 'The next token, so the model can peek at the future.', por: 'The model never sees the future: that is what it predicts. See stage 3.' },
+                    { t: 'The previous token\'s top-layer state, through a map W.', certa: true },
+                    { t: 'A copy of all the model\'s weights.', por: 'The weights do not enter the input. See stage 3.' },
                   ],
-                  erro: 'Volte à etapa 3 do desenho.',
-                  dica: 'Na etapa 3, a seta sai de cima de um token e desce na entrada do seguinte.',
-                  solucao: 'O estado de cima do token anterior: u_t = e_t + W rms(h_{t−1}).',
-                  certo: 'Esse é o núcleo. As próximas lições constroem cada peça a partir do zero.',
+                  erro: 'Go back to stage 3 of the diagram.',
+                  dica: 'In stage 3, the arrow leaves the top of one token and lands at the input of the next.',
+                  solucao: 'The previous token\'s top-layer state: u_t = e_t + W rms(h_{t−1}).',
+                  certo: 'That is the core. The next lessons build each piece from scratch.',
                 },
               ],
             },
             {
               id: 'r1-epocas',
-              titulo: 'Quando os dados acabam',
-              porque: 'O paper existe por causa de um problema prático: o texto bom do mundo está acabando, e treinar de novo nos mesmos dados rende cada vez menos.',
+              titulo: 'When data runs out',
+              porque: 'The paper exists because of a practical problem: the world\'s good text is running out, and training again on the same data pays less each time.',
               passos: [
                 {
-                  texto: `<p>Um modelo de linguagem aprende lendo texto. Uma <strong>época</strong> é uma leitura completa dos dados. Quando o texto bom acaba, a saída comum é ler os mesmos dados de novo: duas, três, quatro épocas.</p>
-<p>Só que cada repetição ensina menos que a anterior. O paper usa a mesma regra de Muennighoff et al. (2023): a época número <code>k</code> vale <code>e<sup>−(k−1)/R*</sup></code> de uma leitura nova. A primeira vale 1, e as seguintes valem cada vez menos. <code>R*</code> diz o quão devagar o valor cai.</p>
-<p>Mexa nos controles ao lado: cada barra é o valor de uma época.</p>`,
+                  texto: `<p>A language model learns by reading text. An <strong>epoch</strong> is one full read of the data. When the good text runs out, the usual way out is to read the same data again: two, three, four epochs.</p>
+<p>But each repeat teaches less than the one before. The paper uses the rule of Muennighoff et al. (2023): epoch number <code>k</code> is worth <code>e<sup>−(k−1)/R*</sup></code> of a fresh read. The first is worth 1, and the next ones less and less. <code>R*</code> says how slowly the worth decays.</p>
+<p>Move the sliders: each bar is the worth of one epoch.</p>`,
                   figura: { modo: 'epocas', rEstrela: 2, epocas: 4 },
-                  tarefa: 'Com <code>R* = 2</code>, quanto vale a segunda época? (Use <code>e<sup>−0,5</sup> ≈ 0,607</code>.)',
-                  campos: [{ rotulo: 'valor da 2ª época =', resposta: 0.607, tol: 0.01 }],
-                  erro: 'Troque k por 2 e R* por 2 no expoente: −(2 − 1) / 2.',
-                  dica: 'O expoente é −1/2 = −0,5, e e<sup>−0,5</sup> ≈ 0,607.',
-                  solucao: 'e^(−(2−1)/2) = e^(−0,5) ≈ 0,607: a segunda leitura vale cerca de 61% de dados novos.',
-                  certo: 'Esse é o problema: gastar computação em mais épocas compra cada vez menos. O paper pergunta se há um jeito melhor de gastar essa mesma computação.',
+                  tarefa: 'With <code>R* = 2</code>, what is the second epoch worth? (Use <code>e<sup>−0.5</sup> ≈ 0.607</code>.)',
+                  campos: [{ rotulo: 'worth of epoch 2 =', resposta: 0.607, tol: 0.01 }],
+                  erro: 'Put k = 2 and R* = 2 in the exponent: −(2 − 1) / 2.',
+                  dica: 'The exponent is −1/2 = −0.5, and e<sup>−0.5</sup> ≈ 0.607.',
+                  solucao: 'e^(−(2−1)/2) = e^(−0.5) ≈ 0.607: the second read is worth about 61% of fresh data.',
+                  certo: 'That is the problem: spending compute on more epochs buys less and less. The paper asks whether there is a better way to spend that same compute.',
                 },
               ],
             },
             {
               id: 'r1-estado',
-              titulo: 'O estado de cima',
-              porque: 'O feedback devolve um vetor específico do modelo, o estado da última camada. Vale saber o que ele é antes de ver para onde ele vai.',
+              titulo: 'The top-layer state',
+              porque: 'The feedback sends back one specific vector of the model, the last layer\'s state. It is worth knowing what it is before seeing where it goes.',
               passos: [
                 {
-                  texto: `<p>Uma rede neural é uma sequência de camadas. Cada camada recebe uma lista de números (um <strong>vetor</strong>), faz contas e passa outro vetor adiante.</p>
-<p>O vetor que sai da última camada, num ponto do texto, é o <strong>estado de cima</strong>, <code>h</code>. É dele que o modelo tira a previsão da próxima palavra. Ele é o resultado de todo o trabalho que o modelo fez até ali.</p>
-<p>Num Transformer comum, depois que a previsão é feita, esse vetor não é usado de novo: a palavra seguinte recomeça das camadas de baixo.</p>`,
-                  tarefa: 'Por que o estado de cima é um bom candidato a ser passado adiante?',
+                  texto: `<p>A neural network is a sequence of layers. Each layer receives a list of numbers (a <strong>vector</strong>), does some arithmetic and passes another vector on.</p>
+<p>The vector that leaves the last layer, at a point in the text, is the <strong>top-layer state</strong>, <code>h</code>. The model takes its prediction of the next word from it. It is the result of all the work the model did up to that point.</p>
+<p>In a plain Transformer, once the prediction is made, this vector is not used again: the next word starts again from the bottom layers.</p>`,
+                  tarefa: 'Why is the top-layer state a good candidate to pass on?',
                   opcoes: [
-                    { t: 'Porque é o vetor mais trabalhado: já passou por todas as camadas.', certa: true },
-                    { t: 'Porque é o menor vetor do modelo.', por: 'O tamanho não é o motivo. Pense em quanta conta já foi feita nele.' },
-                    { t: 'Porque é a própria palavra escrita.', por: 'A palavra escrita é a saída. O estado é o vetor de onde a saída é tirada.' },
+                    { t: 'Because it is the most processed vector: it has gone through every layer.', certa: true },
+                    { t: 'Because it is the smallest vector in the model.', por: 'Size is not the reason. Think about how much computation has already gone into it.' },
+                    { t: 'Because it is the written word itself.', por: 'The written word is the output. The state is the vector the output is taken from.' },
                   ],
-                  erro: 'Pense no caminho que o vetor fez até chegar em cima.',
-                  dica: 'Ele saiu da última camada.',
-                  solucao: 'Porque ele já passou por todas as camadas: é o resumo mais elaborado daquele ponto do texto.',
-                  certo: 'Passá-lo adiante é dar à palavra seguinte, logo na entrada, o que a anterior concluiu lá em cima.',
+                  erro: 'Think about the path the vector took to get to the top.',
+                  dica: 'It came out of the last layer.',
+                  solucao: 'Because it has gone through every layer: it is the most elaborate summary of that point in the text.',
+                  certo: 'Passing it on gives the next word, right at its input, what the previous one concluded at the top.',
                 },
               ],
             },
             {
               id: 'r1-equacao',
-              titulo: 'A equação do feedback',
-              porque: 'O núcleo do paper é a equação (1). Ela tem três peças: a entrada da palavra, um mapa W e uma normalização chamada rms.',
+              titulo: 'The feedback equation',
+              porque: 'The core of the paper is equation (1). It has three pieces: the word\'s input, a map W and a normalization called rms.',
               passos: [
                 {
-                  texto: `<p>A equação (1) do paper:</p>
+                  texto: `<p>Equation (1) of the paper:</p>
 <p style="font-size:1.15em"><code>u<sub>t</sub> = e<sub>t</sub> + W rms(h<sub>t−1</sub>)</code></p>
-<ul><li><code>e<sub>t</sub></code> é a entrada comum da palavra <code>t</code>;</li><li><code>h<sub>t−1</sub></code> é o estado de cima da palavra anterior;</li><li><code>rms</code> põe o vetor numa escala padrão;</li><li><code>W</code> é uma matriz aprendida, que traduz o estado para o formato da entrada.</li></ul>
-<p>O <code>rms</code> divide o vetor pela raiz da média dos quadrados dos seus números. Assim, a média dos quadrados passa a ser 1, e um estado grande não atropela a entrada. Para <code>h = (3, 4)</code>: a média dos quadrados é (9 + 16) / 2 = 12,5, e a raiz é ≈ 3,536.</p>`,
-                  tarefa: 'Quanto vale cada número de <code>rms((3, 4))</code>?',
-                  campos: [{ rotulo: 'primeiro =', resposta: 0.849, tol: 0.01 }, { rotulo: 'segundo =', resposta: 1.131, tol: 0.01 }],
-                  erro: 'Divida 3 e 4 por 3,536.',
-                  dica: '3 / 3,536 e 4 / 3,536.',
-                  solucao: '3 / 3,536 ≈ 0,849 e 4 / 3,536 ≈ 1,131.',
-                  certo: 'Confira: 0,849² + 1,131² ≈ 2, e a média dos quadrados ficou 1. O vetor mudou de tamanho, mas não de direção.',
+<ul><li><code>e<sub>t</sub></code> is the usual input of word <code>t</code>;</li><li><code>h<sub>t−1</sub></code> is the top-layer state of the previous word;</li><li><code>rms</code> puts the vector on a standard scale;</li><li><code>W</code> is a learned matrix that translates the state into the shape of the input.</li></ul>
+<p><code>rms</code> divides the vector by the square root of the mean of its squares. Then the mean of the squares becomes 1, and a large state cannot drown the input. For <code>h = (3, 4)</code>: the mean of the squares is (9 + 16) / 2 = 12.5, and its square root is ≈ 3.536.</p>`,
+                  tarefa: 'What is each number of <code>rms((3, 4))</code>?',
+                  campos: [{ rotulo: 'first =', resposta: 0.849, tol: 0.01 }, { rotulo: 'second =', resposta: 1.131, tol: 0.01 }],
+                  erro: 'Divide 3 and 4 by 3.536.',
+                  dica: '3 / 3.536 and 4 / 3.536.',
+                  solucao: '3 / 3.536 ≈ 0.849 and 4 / 3.536 ≈ 1.131.',
+                  certo: 'Check: 0.849² + 1.131² ≈ 2, so the mean of the squares became 1. The vector changed size, not direction.',
                 },
               ],
             },
             {
               id: 'r1-passadas',
-              titulo: 'Duas passadas, um gradiente',
-              porque: 'O feedback cria um problema no treino. A solução do paper (equação 2 e Algoritmo 1) define quanto ele custa, e o custo decide a comparação.',
+              titulo: 'Two passes, one gradient',
+              porque: 'Feedback creates a problem in training. The paper\'s solution (equation 2 and Algorithm 1) sets its cost, and the cost decides the comparison.',
               passos: [
                 {
-                  texto: `<p>No treino, o modelo lê todas as palavras de um texto ao mesmo tempo, em paralelo. Só que a palavra <code>t</code> precisa do estado de cima da palavra <code>t − 1</code>, que só existe depois que a rede rodou.</p>
-<p>A solução do paper: rodar duas vezes. A <strong>primeira passada</strong> roda sem feedback e sem gradiente, só para obter os estados. A <strong>segunda</strong> roda com esses estados no feedback, e só nela se calcula o gradiente.</p>
-<p>O custo: treinar uma vez custa cerca de 3 unidades (1 para ir adiante e 2 para o gradiente voltar). A passada extra, só adiante, custa 1, ou seja, 1/3 a mais. O paper só faz a passada extra numa parte das vezes: com probabilidade <code>p = 0,15</code> roda uma passada só. Então o custo é <code>c = 1 + (1 − p) / 3</code>.</p>`,
-                  tarefa: 'Com <code>p = 0,15</code>, quanto vale <code>c</code>?',
+                  texto: `<p>In training, the model reads all the words of a text at once, in parallel. But word <code>t</code> needs the top-layer state of word <code>t − 1</code>, which only exists after the network has run.</p>
+<p>The paper's solution: run twice. The <strong>first pass</strong> runs without feedback and without gradient, only to get the states. The <strong>second</strong> runs with those states fed back, and only it computes the gradient.</p>
+<p>The cost: one training pass costs about 3 units (1 to go forward and 2 for the gradient to come back). The extra pass, forward only, costs 1, that is, 1/3 more. The paper only does the extra pass part of the time: with probability <code>p = 0.15</code> it runs a single pass. So the cost is <code>c = 1 + (1 − p) / 3</code>.</p>`,
+                  tarefa: 'With <code>p = 0.15</code>, what is <code>c</code>?',
                   campos: [{ rotulo: 'c =', resposta: 1.283, tol: 0.005 }],
-                  erro: 'Calcule (1 − 0,15) / 3 e some 1.',
-                  dica: '0,85 / 3 ≈ 0,283.',
-                  solucao: 'c = 1 + 0,85 / 3 ≈ 1,283. O paper mede, no relógio, de 1,20 a 1,27.',
-                  certo: 'Com a mesma computação, o modelo com feedback treina c vezes menos épocas. É a troca do paper: menos repetições, mais trabalho por palavra.',
+                  erro: 'Compute (1 − 0.15) / 3 and add 1.',
+                  dica: '0.85 / 3 ≈ 0.283.',
+                  solucao: 'c = 1 + 0.85 / 3 ≈ 1.283. The paper measures 1.20 to 1.27 on the clock.',
+                  certo: 'At equal compute, the feedback model trains c times fewer epochs. That is the paper\'s trade: fewer repeats, more work per word.',
                 },
               ],
             },
             {
               id: 'r1-kappa',
-              titulo: 'Quanto se economiza',
-              porque: 'O resultado principal do paper é um número: quanta computação o feedback economiza para chegar à mesma perda.',
+              titulo: 'How much is saved',
+              porque: 'The paper\'s main result is a number: how much compute feedback saves to reach the same loss.',
               passos: [
                 {
-                  texto: `<p>O paper compara os dois modelos com o mesmo tamanho e os mesmos dados únicos. Ele mede o <strong>multiplicador de computação</strong> <code>κ</code>: quantas vezes mais computação o Transformer comum precisa para chegar à perda do modelo com feedback.</p>
-<p>Se <code>κ = 2</code>, o comum precisa do dobro; então o feedback economiza metade. Em geral, a economia é <code>1 − 1/κ</code>.</p>
-<p>O maior valor medido no paper é <code>κ = 1,91</code>, com 60 milhões de parâmetros, 400 palavras únicas por parâmetro e duas épocas de computação.</p>`,
-                  tarefa: 'Com <code>κ = 1,91</code>, que fração da computação o feedback economiza? Responda em porcentagem.',
-                  campos: [{ rotulo: 'economia (%) =', resposta: 47.6, tol: 0.6 }],
-                  erro: 'Calcule 1 − 1/1,91 e multiplique por 100.',
-                  dica: '1/1,91 ≈ 0,524.',
-                  solucao: '1 − 1/1,91 ≈ 0,476, ou seja, cerca de 48% da computação.',
-                  certo: 'É o "até 48%" do resumo do paper. Agora, a implementação.',
+                  texto: `<p>The paper compares both models at the same size and the same unique data. It measures the <strong>compute multiplier</strong> <code>κ</code>: how many times more compute the plain Transformer needs to reach the feedback model's loss.</p>
+<p>If <code>κ = 2</code>, the plain one needs twice as much; so feedback saves half. In general, the saving is <code>1 − 1/κ</code>.</p>
+<p>The largest value measured in the paper is <code>κ = 1.91</code>, at 60 million parameters, 400 unique tokens per parameter and two epochs of compute.</p>`,
+                  tarefa: 'With <code>κ = 1.91</code>, what share of the compute does feedback save? Answer as a percentage.',
+                  campos: [{ rotulo: 'saving (%) =', resposta: 47.6, tol: 0.6 }],
+                  erro: 'Compute 1 − 1/1.91 and multiply by 100.',
+                  dica: '1/1.91 ≈ 0.524.',
+                  solucao: '1 − 1/1.91 ≈ 0.476, that is, about 48% of the compute.',
+                  certo: 'That is the "up to 48%" in the paper\'s abstract. Now, the implementation.',
                 },
               ],
             },
@@ -308,94 +308,92 @@ export const PESQUISA_1 = {
     },
     {
       id: 'programacao',
-      titulo: 'Implementar',
+      titulo: 'Implement',
       modulos: [
         {
-          titulo: 'A linha de base',
+          titulo: 'The baseline',
           licoes: [
-            ex('r1-letras', 'Os dados', 'Todo modelo de linguagem começa transformando texto em números. Aqui o texto é uma língua pequena, inventada, que vai ser lida muitas vezes: o caso em que os dados acabaram.', {
-              texto: `<p>O código gera frases de uma língua pequena, como "a menina viu a lua e ficou cansada." O fim concorda com o sujeito do começo: menina, cansad<strong>a</strong>; menino, cansad<strong>o</strong>.</p>
-<p>São só 150 frases de treino, cerca de 6 mil letras. O modelo vai lê-las muitas vezes. Outras 150 frases, novas, servem para medir.</p>
-<p>Cada letra vira um número: <code>idx</code> é um dicionário que leva cada letra ao seu número. <code>[idx[c] for c in texto]</code> percorre o texto e troca cada letra pelo número.</p>`,
-              tarefa: 'Complete a linha de <code>treino</code>, no mesmo formato da linha de <code>valid</code>.',
-              inicio: DADOS + `
-treino = np.array([])   # troque: o texto de treino, letra por letra, em números
-valid = np.array([idx[c] for c in texto_valid])
+            ex('r1-letras', 'The data', 'Every language model starts by turning text into numbers. Here the text is a tiny made-up language that will be read many times: the case where data has run out.', {
+              texto: `<p>The code generates sentences of a tiny language, like "the girl saw the moon and then she was tired." The pronoun agrees with the subject at the start: girl, <strong>she</strong>; boy, <strong>he</strong>.</p>
+<p>There are only 150 training sentences, about 8,000 letters. The model will read them many times. Another 150 sentences, new ones, are used for measuring.</p>
+<p>Each letter becomes a number: <code>stoi</code> is a dictionary from each letter to its number. <code>[stoi[c] for c in text]</code> walks through the text and replaces each letter by its number.</p>`,
+              tarefa: 'Complete the <code>train_data</code> line, in the same form as the <code>valid_data</code> line.',
+              inicio: DATA + `
+train_data = np.array([])   # replace: the training text, letter by letter, as numbers
+valid_data = np.array([stoi[c] for c in text_valid])
 
-print(texto_treino[:120])
-print("letras diferentes:", V)
-print("letras de treino:", len(treino))
-print("as 10 primeiras, em números:", treino[:10])
+print(text_train[:120])
+print("distinct letters:", V)
+print("training letters:", len(train_data))
+print("the first 10, as numbers:", train_data[:10])
 `,
-              dica: '<code>treino = np.array([idx[c] for c in texto_treino])</code>.',
-              solucao: DADOS + `
-treino = np.array([idx[c] for c in texto_treino])
-valid = np.array([idx[c] for c in texto_valid])
+              dica: '<code>train_data = np.array([stoi[c] for c in text_train])</code>.',
+              solucao: DATA + `
+train_data = np.array([stoi[c] for c in text_train])
+valid_data = np.array([stoi[c] for c in text_valid])
 
-print(texto_treino[:120])
-print("letras diferentes:", V)
-print("letras de treino:", len(treino))
-print("as 10 primeiras, em números:", treino[:10])
+print(text_train[:120])
+print("distinct letters:", V)
+print("training letters:", len(train_data))
+print("the first 10, as numbers:", train_data[:10])
 `,
               checagem: `
-tem('treino')
-if len(treino) != len(texto_treino):
-    falha('Devia haver um número para cada letra do texto de treino: ' + str(len(texto_treino)) + ' ao todo.')
-if ''.join(letras[i] for i in treino[:50]) != texto_treino[:50]:
-    falha('Os números não voltam ao texto. Use idx[c] para cada letra c de texto_treino.')
+if len(train_data) != len(text_train):
+    falha('There should be one number for each letter of the training text: ' + str(len(text_train)) + ' in total.')
+if ''.join(chars[int(i)] for i in train_data[:50]) != text_train[:50]:
+    falha('The numbers do not turn back into the text. Use stoi[c] for each letter c of text_train.')
 `,
-              certo: 'O texto virou uma lista de números. É assim que todo modelo de linguagem vê o texto, só que com pedaços de palavra (tokens) no lugar de letras.',
+              certo: 'The text became a list of numbers. That is how every language model sees text, only with pieces of words (tokens) instead of letters.',
             }),
-            ex('r1-adiante', 'O modelo sem feedback', 'O paper muda um Transformer. Aqui a linha de base é a rede do makemore: uma janela de 3 letras, uma camada escondida e a previsão da próxima letra. É o menor modelo que tem um estado de cima.', {
-              texto: `<p>A rede lê as 3 letras antes de cada posição. Cada letra vira 12 números (a tabela <code>E</code>), e as três ficam lado a lado em <code>e</code>.</p>
-<p>A entrada <code>u</code> é <code>e</code> mais o feedback. Por enquanto, o feedback <code>fb</code> é só zeros, então <code>u = e</code>.</p>
-<p>O <strong>estado de cima</strong> é <code>h = tanh(u · W1 + b1)</code>: uma multiplicação de matriz, um vetor somado e a função <code>tanh</code>, que espreme cada número entre −1 e 1. Do estado saem as notas de cada letra possível, os <code>logits</code>.</p>`,
-              tarefa: 'Na linha marcada, faltam o <code>b1</code> e a <code>tanh</code>. Escreva <code>h = np.tanh(u @ P[\'W1\'] + P[\'b1\'])</code>.',
-              inicio: DADOS + CODIFICAR + modelo(`    h = u @ P['W1']                                   # troque: falta o b1 e a tanh`) + `
-P = iniciar(0)
-ctx = janelas(treino, np.arange(3, 8))[None]       # 5 posições: forma (1, 5, 3)
+            ex('r1-adiante', 'The model without feedback', 'The paper changes a Transformer. Here the baseline is the makemore network: a 3-letter window, one hidden layer and the prediction of the next letter. It is the smallest model that has a top-layer state.', {
+              texto: `<p>The network reads the 3 letters before each position. Each letter becomes 12 numbers (the table <code>E</code>), and the three sit side by side in <code>e</code>.</p>
+<p>The input <code>u</code> is <code>e</code> plus the feedback. For now, the feedback <code>fb</code> is all zeros, so <code>u = e</code>.</p>
+<p>The <strong>top-layer state</strong> is <code>h = tanh(u · W1 + b1)</code>: a matrix multiplication, a vector added, and the <code>tanh</code> function, which squeezes each number between −1 and 1. The scores for each possible letter, the <code>logits</code>, come out of the state.</p>`,
+              tarefa: 'The marked line is missing <code>b1</code> and the <code>tanh</code>. Write <code>h = np.tanh(u @ P[\'W1\'] + P[\'b1\'])</code>.',
+              inicio: DATA + ENCODE + model(`    h = u @ P['W1']                                   # replace: b1 and the tanh are missing`) + `
+P = init(0)
+ctx = windows(train_data, np.arange(3, 8))[None]   # 5 positions: shape (1, 5, 3)
 fb = np.zeros((1, 5, H))
-e, u, h, logits = adiante(P, ctx, fb)
-print("janelas:", ctx.shape, " estado h:", h.shape, " logits:", logits.shape)
-print("o estado fica entre -1 e 1:", h.min().round(3), h.max().round(3))
+e, u, h, logits = forward(P, ctx, fb)
+print("windows:", ctx.shape, " state h:", h.shape, " logits:", logits.shape)
+print("the state stays between -1 and 1:", h.min().round(3), h.max().round(3))
 `,
-              dica: 'A linha fica <code>    h = np.tanh(u @ P[\'W1\'] + P[\'b1\'])</code>, com 4 espaços de recuo.',
-              solucao: DADOS + CODIFICAR + MODELO + `
-P = iniciar(0)
-ctx = janelas(treino, np.arange(3, 8))[None]       # 5 posições: forma (1, 5, 3)
+              dica: 'The line becomes <code>    h = np.tanh(u @ P[\'W1\'] + P[\'b1\'])</code>, indented by 4 spaces.',
+              solucao: DATA + ENCODE + MODEL + `
+P = init(0)
+ctx = windows(train_data, np.arange(3, 8))[None]   # 5 positions: shape (1, 5, 3)
 fb = np.zeros((1, 5, H))
-e, u, h, logits = adiante(P, ctx, fb)
-print("janelas:", ctx.shape, " estado h:", h.shape, " logits:", logits.shape)
-print("o estado fica entre -1 e 1:", h.min().round(3), h.max().round(3))
+e, u, h, logits = forward(P, ctx, fb)
+print("windows:", ctx.shape, " state h:", h.shape, " logits:", logits.shape)
+print("the state stays between -1 and 1:", h.min().round(3), h.max().round(3))
 `,
               checagem: `
-tem('adiante')
 r = np.random.default_rng(5)
-Pt = iniciar(1)
+Pt = init(1)
 Pt['b1'] = r.normal(0, 1, H)
-c = janelas(treino, np.arange(3, 11))[None]
+c = windows(train_data, np.arange(3, 11))[None]
 f = r.normal(0, 1, (1, 8, H))
-_, ut, ht, _ = adiante(Pt, c, f)
+_, ut, ht, _ = forward(Pt, c, f)
 if not np.allclose(ht, np.tanh(ut @ Pt['W1'] + Pt['b1'])):
-    falha('O estado devia ser tanh(u @ W1 + b1). Confira se somou o b1 e aplicou a tanh.')
+    falha('The state should be tanh(u @ W1 + b1). Check that you added b1 and applied the tanh.')
 `,
-              certo: 'Esta é a linha de base: cada posição olha só a sua janela de 3 letras. O estado h é calculado e, depois da previsão, jogado fora.',
+              certo: 'This is the baseline: each position sees only its 3-letter window. The state h is computed and, after the prediction, thrown away.',
             }),
           ],
         },
         {
-          titulo: 'O feedback',
+          titulo: 'The feedback',
           licoes: [
-            ex('r1-rms', 'A normalização rms', 'Antes de entrar na letra seguinte, o estado passa pelo rms, a peça que você calculou à mão.', {
-              texto: `<p>Com numpy, <code>(h ** 2).mean(-1, keepdims=True)</code> calcula a média dos quadrados ao longo do último eixo, o dos números de cada estado, e mantém o formato para a divisão funcionar em todas as posições de uma vez.</p>
-<p>Somamos <code>1e-6</code> antes da raiz para nunca dividir por zero: o estado da primeira letra é um vetor de zeros.</p>`,
-              tarefa: 'Complete <code>rms(h)</code>: divida <code>h</code> pela raiz da média dos quadrados mais <code>1e-6</code>.',
+            ex('r1-rms', 'The rms normalization', 'Before entering the next letter, the state goes through rms, the piece you computed by hand.', {
+              texto: `<p>With numpy, <code>(h ** 2).mean(-1, keepdims=True)</code> takes the mean of the squares along the last axis, the numbers of each state, and keeps the shape so the division works at every position at once.</p>
+<p>We add <code>1e-6</code> before the square root so we never divide by zero: the state before the first letter is a vector of zeros.</p>`,
+              tarefa: 'Complete <code>rms(h)</code>: divide <code>h</code> by the square root of the mean of the squares plus <code>1e-6</code>.',
               inicio: `import numpy as np
 
 def rms(h):
-    return h   # troque: h dividido pela raiz da média dos quadrados (mais 1e-6)
+    return h   # replace: h divided by the square root of the mean of the squares (plus 1e-6)
 
-print(rms(np.array([3.0, 4.0])))                  # devia dar perto de [0.849 1.131]
+print(rms(np.array([3.0, 4.0])))                  # should be close to [0.849 1.131]
 print(rms(np.array([[1.0, -1.0, 2.0, 0.0]])))
 `,
               dica: '<code>return h / np.sqrt((h ** 2).mean(-1, keepdims=True) + 1e-6)</code>.',
@@ -404,185 +402,177 @@ print(rms(np.array([[1.0, -1.0, 2.0, 0.0]])))
 def rms(h):
     return h / np.sqrt((h ** 2).mean(-1, keepdims=True) + 1e-6)
 
-print(rms(np.array([3.0, 4.0])))                  # devia dar perto de [0.849 1.131]
+print(rms(np.array([3.0, 4.0])))                  # should be close to [0.849 1.131]
 print(rms(np.array([[1.0, -1.0, 2.0, 0.0]])))
 `,
               checagem: `
-tem('rms')
 v = rms(np.array([3.0, 4.0]))
 if not np.allclose(v, [0.84853, 1.13137], atol=1e-3):
-    falha('Para (3, 4), o rms devia dar perto de (0,849, 1,131).')
+    falha('For (3, 4), rms should give about (0.849, 1.131).')
 m = np.random.default_rng(0).normal(0, 5, (4, 7))
 if not np.allclose((rms(m) ** 2).mean(-1), 1, atol=1e-3):
-    falha('Cada linha devia sair com média dos quadrados igual a 1. Use mean(-1, keepdims=True).')
+    falha('Each row should come out with a mean of squares equal to 1. Use mean(-1, keepdims=True).')
 if not np.all(np.isfinite(rms(np.zeros((2, 3))))):
-    falha('Um vetor de zeros não pode dar divisão por zero. Some 1e-6 antes da raiz.')
+    falha('A vector of zeros cannot cause a division by zero. Add 1e-6 before the square root.')
 `,
-              certo: 'Cada estado sai na mesma escala, seja qual for o seu tamanho original.',
+              certo: 'Every state comes out on the same scale, whatever its original size.',
             }),
-            ex('r1-estados', 'A primeira passada', 'A equação (2) do paper roda passadas em paralelo até chegar aos estados de quem decodifica palavra por palavra. Num modelo deste tamanho, dá para fazer isso diretamente: letra por letra.', {
-              texto: `<p>A função <code>estados</code> anda pelas letras em ordem. Em cada letra <code>t</code>, ela calcula o estado de cima usando o estado da letra anterior, que está guardado em <code>h</code>: é a equação (1), seguida da camada do modelo.</p>
-<p>No fim, <code>deslocar</code> empurra os estados uma letra para a frente: a letra <code>t</code> recebe o estado da <code>t − 1</code>, e a primeira recebe zeros.</p>
-<p>Um teste bonito: se você roda <code>adiante</code> com esses estados no feedback, o estado que sai é exatamente o mesmo que entrou. É o <strong>ponto fixo</strong> da equação (2) do paper.</p>`,
-              tarefa: 'Na linha marcada, falta o feedback. Troque <code>e[:, t]</code> por <code>e[:, t] + rms(h) @ P[\'Wf\']</code> dentro do parêntese.',
-              inicio: DADOS + CODIFICAR + MODELO + estadosCom(`        h = np.tanh(e[:, t] @ P['W1'] + P['b1'])   # troque: falta o feedback do h anterior`) + `
-P = iniciar(0)
-P['Wf'] = np.random.default_rng(1).normal(0, 0.3, P['Wf'].shape)   # um W forte, para o efeito aparecer
-ctx = janelas(treino, np.arange(3, 43))[None]                        # 40 letras
-hs = estados(P, ctx)
-_, _, h2, _ = adiante(P, ctx, deslocar(hs))
-print("diferença entre o estado e o ponto fixo:", np.abs(h2 - hs).max())
+            ex('r1-estados', 'The first pass', 'Equation (2) of the paper runs passes in parallel until it reaches the states of a model decoding word by word. In a model this small, we can do it directly: letter by letter.', {
+              texto: `<p>The function <code>states</code> walks through the letters in order. At each letter <code>t</code>, it computes the top-layer state using the previous letter's state, kept in <code>h</code>: that is equation (1), followed by the model's layer.</p>
+<p>At the end, <code>shift</code> pushes the states one letter forward: letter <code>t</code> receives the state of letter <code>t − 1</code>, and the first receives zeros.</p>
+<p>A nice test: if you run <code>forward</code> with these states as feedback, the state that comes out is exactly the one that went in. It is the <strong>fixed point</strong> of equation (2) in the paper.</p>`,
+              tarefa: 'The marked line is missing the feedback. Replace <code>e[:, t]</code> by <code>e[:, t] + rms(h) @ P[\'Wf\']</code> inside the parentheses.',
+              inicio: DATA + ENCODE + MODEL + statesWith(`        h = np.tanh(e[:, t] @ P['W1'] + P['b1'])   # replace: the feedback from the previous h is missing`) + `
+P = init(0)
+P['Wf'] = np.random.default_rng(1).normal(0, 0.3, P['Wf'].shape)   # a strong W, so the effect shows
+ctx = windows(train_data, np.arange(3, 43))[None]                    # 40 letters
+hs = states(P, ctx)
+_, _, h2, _ = forward(P, ctx, shift(hs))
+print("difference between the state and the fixed point:", np.abs(h2 - hs).max())
 `,
-              dica: 'A linha fica <code>        h = np.tanh((e[:, t] + rms(h) @ P[\'Wf\']) @ P[\'W1\'] + P[\'b1\'])</code>.',
-              solucao: DADOS + CODIFICAR + MODELO + ESTADOS + `
-P = iniciar(0)
-P['Wf'] = np.random.default_rng(1).normal(0, 0.3, P['Wf'].shape)   # um W forte, para o efeito aparecer
-ctx = janelas(treino, np.arange(3, 43))[None]                        # 40 letras
-hs = estados(P, ctx)
-_, _, h2, _ = adiante(P, ctx, deslocar(hs))
-print("diferença entre o estado e o ponto fixo:", np.abs(h2 - hs).max())
+              dica: 'The line becomes <code>        h = np.tanh((e[:, t] + rms(h) @ P[\'Wf\']) @ P[\'W1\'] + P[\'b1\'])</code>.',
+              solucao: DATA + ENCODE + MODEL + STATES + `
+P = init(0)
+P['Wf'] = np.random.default_rng(1).normal(0, 0.3, P['Wf'].shape)   # a strong W, so the effect shows
+ctx = windows(train_data, np.arange(3, 43))[None]                    # 40 letters
+hs = states(P, ctx)
+_, _, h2, _ = forward(P, ctx, shift(hs))
+print("difference between the state and the fixed point:", np.abs(h2 - hs).max())
 `,
               checagem: `
-tem('estados')
 if np.abs(h2 - hs).max() > 1e-9:
-    falha('Os estados ainda não são o ponto fixo. Na linha marcada, some rms(h) @ P[\\'Wf\\'] a e[:, t].')
+    falha('The states are not the fixed point yet. In the marked line, add rms(h) @ P["Wf"] to e[:, t].')
 `,
-              certo: 'Diferença zero: os estados da primeira passada são exatamente os de quem lê letra por letra. A segunda passada pode usá-los em paralelo.',
+              certo: 'Zero difference: the first-pass states are exactly those of a model reading letter by letter. The second pass can use them in parallel.',
             }),
-            ex('r1-passo', 'O passo de treino', 'Agora o Algoritmo 1 do paper inteiro: duas passadas, gradiente só na segunda, e o backprop escrito à mão, como no micrograd, só que com matrizes.', {
-              texto: `<p>Leia <code>passo</code> de cima para baixo:</p>
-<ul><li>sorteia 32 trechos de 24 letras do texto de treino;</li><li>com probabilidade 0,85, roda a <strong>primeira passada</strong> (<code>estados</code>) e guarda os estados deslocados em <code>fb</code>;</li><li>roda a <strong>segunda</strong> com esse <code>fb</code>, calcula a perda e faz o gradiente voltar.</li></ul>
-<p>Repare na linha <code>g['Wf'] = rms(fb)...</code>: para o gradiente, o feedback é uma entrada fixa. Ele não volta pela primeira passada. É isso que torna a primeira passada "sem gradiente".</p>`,
-              tarefa: 'Na linha marcada, guarde em <code>fb</code> os estados da primeira passada, deslocados: <code>fb = deslocar(estados(P, ctx))</code>.',
-              inicio: DADOS + CODIFICAR + MODELO + ESTADOS + passoCom(`        fb = fb                                # troque: os estados da 1a passada, deslocados`) + `
-P0 = iniciar(0)
-P, curva = treinar(True, 300)
-print("perda no começo:", round(curva[0], 3), "  no fim:", round(float(np.mean(curva[-30:])), 3))
-print("o quanto o mapa W do feedback mudou:", round(float(np.abs(P['Wf'] - P0['Wf']).max()), 3))
+            ex('r1-passo', 'The training step', 'Now the whole of Algorithm 1 in the paper: two passes, gradient only in the second, and the backward pass written by hand, like micrograd, but with matrices.', {
+              texto: `<p>Read <code>step</code> from top to bottom:</p>
+<ul><li>it samples 32 chunks of 24 letters from the training text;</li><li>with probability 0.85, it runs the <strong>first pass</strong> (<code>states</code>) and keeps the shifted states in <code>fb</code>;</li><li>it runs the <strong>second</strong> with that <code>fb</code>, computes the loss and sends the gradient back.</li></ul>
+<p>Look at the line <code>g['Wf'] = rms(fb)...</code>: for the gradient, the feedback is a fixed input. It does not flow back through the first pass. That is what makes the first pass "gradient-free".</p>`,
+              tarefa: 'In the marked line, store in <code>fb</code> the shifted states of the first pass: <code>fb = shift(states(P, ctx))</code>.',
+              inicio: DATA + ENCODE + MODEL + STATES + stepWith(`        fb = fb                                 # replace: the shifted states of pass 1`) + `
+P0 = init(0)
+P, curve = train(True, 300)
+print("loss at the start:", round(curve[0], 3), "  at the end:", round(float(np.mean(curve[-30:])), 3))
+print("how much the feedback map W changed:", round(float(np.abs(P['Wf'] - P0['Wf']).max()), 3))
 
 import matplotlib.pyplot as plt
 plt.figure(figsize=(5, 3.2))
-plt.plot(curva)
-plt.xlabel("passo de treino")
-plt.ylabel("perda")
+plt.plot(curve)
+plt.xlabel("training step")
+plt.ylabel("loss")
 `,
-              dica: 'A linha fica <code>        fb = deslocar(estados(P, ctx))</code>, com 8 espaços de recuo.',
-              solucao: DADOS + CODIFICAR + MODELO + ESTADOS + TREINO + `
-P0 = iniciar(0)
-P, curva = treinar(True, 300)
-print("perda no começo:", round(curva[0], 3), "  no fim:", round(float(np.mean(curva[-30:])), 3))
-print("o quanto o mapa W do feedback mudou:", round(float(np.abs(P['Wf'] - P0['Wf']).max()), 3))
+              dica: 'The line becomes <code>        fb = shift(states(P, ctx))</code>, indented by 8 spaces.',
+              solucao: DATA + ENCODE + MODEL + STATES + TRAIN + `
+P0 = init(0)
+P, curve = train(True, 300)
+print("loss at the start:", round(curve[0], 3), "  at the end:", round(float(np.mean(curve[-30:])), 3))
+print("how much the feedback map W changed:", round(float(np.abs(P['Wf'] - P0['Wf']).max()), 3))
 
 import matplotlib.pyplot as plt
 plt.figure(figsize=(5, 3.2))
-plt.plot(curva)
-plt.xlabel("passo de treino")
-plt.ylabel("perda")
+plt.plot(curve)
+plt.xlabel("training step")
+plt.ylabel("loss")
 `,
               checagem: `
-tem('P')
 if np.abs(P['Wf'] - P0['Wf']).max() < 0.05:
-    falha('O mapa W do feedback quase não mudou: o feedback continua sendo zeros. Use fb = deslocar(estados(P, ctx)).')
+    falha('The feedback map W barely changed: the feedback is still all zeros. Use fb = shift(states(P, ctx)).')
 `,
-              certo: 'O mapa W aprendeu: o modelo passou a usar o estado da letra anterior. Falta a comparação do paper, com a mesma computação.',
+              certo: 'The map W learned: the model started using the previous letter\'s state. What is left is the paper\'s comparison, at equal compute.',
               limite: 30000,
             }),
           ],
         },
         {
-          titulo: 'Reproduzir',
+          titulo: 'Reproduce',
           licoes: [
-            ex('r1-numero', 'Com a mesma computação', 'A comparação do paper é justa por construção: os dois modelos gastam a mesma computação nos mesmos dados únicos. O sem feedback usa essa computação em mais épocas; o com feedback, nas duas passadas.', {
-              texto: `<p>Cada passo do modelo com feedback custa <code>c = 1 + (1 − p) / 3</code> passos do modelo sem feedback. Então, com um orçamento de <code>N</code> passos, o modelo com feedback só pode dar <code>N / c</code>.</p>
-<p>O código treina o modelo sem feedback por <code>N = 500</code> passos (são dezenas de épocas sobre as 6 mil letras: os dados se repetem muito) e o com feedback por <code>N / c</code>. Depois mede os dois nas frases novas.</p>
-<p>Para ver se mais épocas resolvem, o sem feedback também treina o dobro: <code>2N</code>. São três treinos: pode levar alguns segundos.</p>`,
-              tarefa: 'Calcule <code>c</code> com <code>p = 0.15</code> e o número de passos do modelo com feedback, <code>passos_fb = int(N / c)</code>.',
-              inicio: TUDO + `
+            ex('r1-numero', 'At equal compute', 'The paper\'s comparison is fair by construction: both models spend the same compute on the same unique data. The plain model spends it on more epochs; the feedback model, on the two passes.', {
+              texto: `<p>Each step of the feedback model costs <code>c = 1 + (1 − p) / 3</code> steps of the plain model. So, with a budget of <code>N</code> steps, the feedback model can only take <code>N / c</code>.</p>
+<p>The code trains the plain model for <code>N = 500</code> steps (dozens of epochs over the 8,000 letters: the data repeats a lot) and the feedback model for <code>N / c</code>. Then it measures both on the new sentences.</p>
+<p>To see whether more epochs fix it, the plain model also trains twice as long: <code>2N</code>. That is three trainings: it can take a few seconds.</p>`,
+              tarefa: 'Compute <code>c</code> with <code>p = 0.15</code> and the number of steps of the feedback model, <code>steps_fb = int(N / c)</code>.',
+              inicio: ALL + `
 p = 0.15
 N = 500
-c = 1          # troque: 1 + (1 - p) / 3
-passos_fb = N  # troque: int(N / c)
+c = 1          # replace: 1 + (1 - p) / 3
+steps_fb = N   # replace: int(N / c)
 
-P_sem, _ = treinar(False, N)
-P_sem2, _ = treinar(False, 2 * N)
-P_fb, _ = treinar(True, passos_fb)
-perda_sem = perdas(P_sem, valid, False).mean()
-perda_sem2 = perdas(P_sem2, valid, False).mean()
-perda_fb = perdas(P_fb, valid, True).mean()
-print(f"c = {c:.3f}   passos com feedback = {passos_fb}")
-print(f"sem feedback, N passos:   {perda_sem:.3f}")
-print(f"sem feedback, 2N passos:  {perda_sem2:.3f}")
-print(f"com feedback, N/c passos: {perda_fb:.3f}")
+P_plain, _ = train(False, N)
+P_plain2, _ = train(False, 2 * N)
+P_fb, _ = train(True, steps_fb)
+loss_plain = losses(P_plain, valid_data, False).mean()
+loss_plain2 = losses(P_plain2, valid_data, False).mean()
+loss_fb = losses(P_fb, valid_data, True).mean()
+print(f"c = {c:.3f}   feedback steps = {steps_fb}")
+print(f"no feedback, N steps:     {loss_plain:.3f}")
+print(f"no feedback, 2N steps:    {loss_plain2:.3f}")
+print(f"with feedback, N/c steps: {loss_fb:.3f}")
 `,
-              dica: '<code>c = 1 + (1 - p) / 3</code> e <code>passos_fb = int(N / c)</code>.',
-              solucao: TUDO + `
+              dica: '<code>c = 1 + (1 - p) / 3</code> and <code>steps_fb = int(N / c)</code>.',
+              solucao: ALL + `
 p = 0.15
 N = 500
 c = 1 + (1 - p) / 3
-passos_fb = int(N / c)
+steps_fb = int(N / c)
 
-P_sem, _ = treinar(False, N)
-P_sem2, _ = treinar(False, 2 * N)
-P_fb, _ = treinar(True, passos_fb)
-perda_sem = perdas(P_sem, valid, False).mean()
-perda_sem2 = perdas(P_sem2, valid, False).mean()
-perda_fb = perdas(P_fb, valid, True).mean()
-print(f"c = {c:.3f}   passos com feedback = {passos_fb}")
-print(f"sem feedback, N passos:   {perda_sem:.3f}")
-print(f"sem feedback, 2N passos:  {perda_sem2:.3f}")
-print(f"com feedback, N/c passos: {perda_fb:.3f}")
+P_plain, _ = train(False, N)
+P_plain2, _ = train(False, 2 * N)
+P_fb, _ = train(True, steps_fb)
+loss_plain = losses(P_plain, valid_data, False).mean()
+loss_plain2 = losses(P_plain2, valid_data, False).mean()
+loss_fb = losses(P_fb, valid_data, True).mean()
+print(f"c = {c:.3f}   feedback steps = {steps_fb}")
+print(f"no feedback, N steps:     {loss_plain:.3f}")
+print(f"no feedback, 2N steps:    {loss_plain2:.3f}")
+print(f"with feedback, N/c steps: {loss_fb:.3f}")
 `,
               checagem: `
-tem('c')
-tem('passos_fb')
 if not perto(c, 1.28333, 1e-3):
-    falha('c devia dar cerca de 1,283.')
-if passos_fb != int(N / c):
-    falha('passos_fb devia ser int(N / c).')
-if not perda_fb < perda_sem2:
-    falha('Com a mesma computação, o feedback devia ficar abaixo do modelo sem feedback.')
+    falha('c should be about 1.283.')
+if steps_fb != int(N / c):
+    falha('steps_fb should be int(N / c).')
+if not loss_fb < loss_plain2:
+    falha('At equal compute, feedback should end below the model without feedback.')
 `,
-              certo: 'Com menos passos, o feedback ficou abaixo do sem feedback; e nem com o dobro de computação o sem feedback alcança. No paper, isso aparece como κ = ∞ nas linhas de muita repetição (Tabela 8). A forma do resultado se reproduziu, num modelo milhões de vezes menor.',
+              certo: 'With fewer steps, feedback ended below the plain model; and not even with twice the compute does the plain model catch up. In the paper, this shows up as κ = ∞ in the rows with heavy repetition (Table 8). The shape of the result reproduced, in a model millions of times smaller.',
               limite: 45000,
             }),
-            ex('r1-pergunta', 'Uma pergunta própria: o feedback guarda o sujeito?', 'O paper mede a perda média. Uma pergunta que ele não faz, e que é a de Vygotsky: o estado que passa de palavra em palavra funciona como uma fala interna, que guarda do que se está falando?', {
-              texto: `<p>Para Vygotsky, a fala interna é abreviada: ela omite o sujeito, porque quem pensa já sabe de quem está falando, e guarda só o que se diz sobre ele. O feedback latente parece isso: um estado, sem palavras, que passa de uma palavra para a próxima.</p>
-<p>A língua deste capítulo tem um teste pronto. A última letra antes do ponto concorda com o sujeito do começo da frase: menin<strong>a</strong>... cansad<strong>a</strong>. Essa letra está a mais de 20 letras do sujeito, longe da janela de 3. Só um estado que guarda o sujeito pode acertá-la.</p>
-<p>O teste: medir a perda <strong>só nessa letra</strong> e no resto, para os dois modelos. Se o feedback guardasse o sujeito, a perda nessa letra cairia muito abaixo de 0,69 (o −log de 1/2, o acaso entre "o" e "a").</p>`,
-              tarefa: 'Monte <code>genero</code>: <code>True</code> nas posições cuja letra seguinte é o ponto. Use <code>np.array([texto_valid[i + 1] == \'.\' for i in pos])</code>.',
-              inicio: TUDO + `
-P_sem, _ = treinar(False, 300)
-P_fb, _ = treinar(True, int(300 / 1.2833))
-l_sem = perdas(P_sem, valid, False)
-l_fb = perdas(P_fb, valid, True)
-pos = np.arange(K, len(valid) - 1)          # as posições medidas (sem a última)
-l_sem, l_fb = l_sem[:-1], l_fb[:-1]
+            ex('r1-pergunta', 'Own question: does the feedback keep the subject?', 'The paper measures the average loss. A question it does not ask, and that is Vygotsky\'s: does the state that passes from word to word work like inner speech, keeping track of what is being talked about?', {
+              texto: `<p>For Vygotsky, inner speech is abbreviated: it drops the subject, because whoever is thinking already knows who it is about, and keeps only what is said of it. Latent feedback looks like that: a state, without words, passed from one word to the next.</p>
+<p>The language of this chapter has a ready-made test. The pronoun agrees with the subject at the start of the sentence: the <strong>girl</strong> … and then <strong>s</strong>he. The pronoun's first letter (<code>h</code> or <code>s</code>) is more than 20 letters away from the subject, far outside the 3-letter window. Only a state that keeps the subject can get it right.</p>
+<p>The test: measure the loss <strong>only on that letter</strong> and on the rest, for both models. If the feedback kept the subject, the loss on that letter would drop well below 0.69 (−log of 1/2, chance between "he" and "she").</p>`,
+              tarefa: 'Build <code>pronoun</code>: <code>True</code> at the positions right after <code>"then "</code>. Use <code>np.array([text_valid[i - 5:i] == \'then \' for i in pos])</code>.',
+              inicio: ALL + `
+P_plain, _ = train(False, 300)
+P_fb, _ = train(True, int(300 / 1.2833))
+l_plain = losses(P_plain, valid_data, False)
+l_fb = losses(P_fb, valid_data, True)
+pos = np.arange(K, len(valid_data))   # the measured positions
 
-genero = np.zeros(len(pos), bool)   # troque: True onde a letra seguinte é o ponto
+pronoun = np.zeros(len(pos), bool)   # replace: True where the letter comes right after "then "
 
-print(f"letra do gênero ({genero.sum()} letras)   sem feedback: {l_sem[genero].mean():.3f}   com feedback: {l_fb[genero].mean():.3f}")
-print(f"o resto do texto                 sem feedback: {l_sem[~genero].mean():.3f}   com feedback: {l_fb[~genero].mean():.3f}")
+print(f"pronoun letter ({pronoun.sum()} letters)   no feedback: {l_plain[pronoun].mean():.3f}   feedback: {l_fb[pronoun].mean():.3f}")
+print(f"the rest of the text          no feedback: {l_plain[~pronoun].mean():.3f}   feedback: {l_fb[~pronoun].mean():.3f}")
 `,
-              dica: '<code>genero = np.array([texto_valid[i + 1] == \'.\' for i in pos])</code>.',
-              solucao: TUDO + `
-P_sem, _ = treinar(False, 300)
-P_fb, _ = treinar(True, int(300 / 1.2833))
-l_sem = perdas(P_sem, valid, False)
-l_fb = perdas(P_fb, valid, True)
-pos = np.arange(K, len(valid) - 1)          # as posições medidas (sem a última)
-l_sem, l_fb = l_sem[:-1], l_fb[:-1]
+              dica: '<code>pronoun = np.array([text_valid[i - 5:i] == \'then \' for i in pos])</code>.',
+              solucao: ALL + `
+P_plain, _ = train(False, 300)
+P_fb, _ = train(True, int(300 / 1.2833))
+l_plain = losses(P_plain, valid_data, False)
+l_fb = losses(P_fb, valid_data, True)
+pos = np.arange(K, len(valid_data))   # the measured positions
 
-genero = np.array([texto_valid[i + 1] == '.' for i in pos])
+pronoun = np.array([text_valid[i - 5:i] == 'then ' for i in pos])
 
-print(f"letra do gênero ({genero.sum()} letras)   sem feedback: {l_sem[genero].mean():.3f}   com feedback: {l_fb[genero].mean():.3f}")
-print(f"o resto do texto                 sem feedback: {l_sem[~genero].mean():.3f}   com feedback: {l_fb[~genero].mean():.3f}")
+print(f"pronoun letter ({pronoun.sum()} letters)   no feedback: {l_plain[pronoun].mean():.3f}   feedback: {l_fb[pronoun].mean():.3f}")
+print(f"the rest of the text          no feedback: {l_plain[~pronoun].mean():.3f}   feedback: {l_fb[~pronoun].mean():.3f}")
 `,
               checagem: `
-tem('genero')
-if int(genero.sum()) != texto_valid.count('.'):
-    falha('Devia haver uma letra de gênero por frase: ' + str(texto_valid.count('.')) + '. Marque as posições i com texto_valid[i + 1] == ".".')
+if int(pronoun.sum()) != text_valid.count('then '):
+    falha('There should be one pronoun letter per sentence: ' + str(text_valid.count('then ')) + '. Mark the positions i where text_valid[i - 5:i] == "then ".')
 `,
-              certo: 'O ganho do feedback está todo no resto do texto. Na letra do gênero, nenhum dos dois fica abaixo do acaso (0,69), e o feedback não ajuda em nada: o estado não guarda o sujeito. O motivo está no próprio método: o gradiente não atravessa o feedback (a primeira passada não tem gradiente), então nada ensina o estado a guardar algo para depois. Ele carrega o que ajuda a letra seguinte, não o que ajudaria 20 letras à frente. Uma fala interna, no sentido de Vygotsky, serve a um plano. Este feedback não é treinado para isso. Testar se um feedback treinado para o futuro (com gradiente através do tempo) passa a guardar o sujeito é um experimento que o paper não fez.',
+              certo: 'Feedback lowers the loss everywhere, but on the pronoun neither model gets below chance (0.69): the state does not keep the subject. Whatever feedback gains there comes from nearby letters, not from remembering who the sentence is about. The reason is in the method itself: the gradient does not flow through the feedback (the first pass has no gradient), so nothing teaches the state to keep something for later. It carries what helps the next letter, not what would help 20 letters ahead. Inner speech, in Vygotsky\'s sense, serves a plan. This feedback is not trained for that. Testing whether a feedback trained for the future (with gradient through time) starts keeping the subject is an experiment the paper did not run.',
               limite: 30000,
             }),
           ],

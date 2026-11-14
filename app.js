@@ -85,7 +85,7 @@ function abrirPython() {
     if (data.tipo === 'pronto') { python = 'pronto'; mostrarEstadoPython() }
     else if (data.tipo === 'falhou') { python = 'falhou'; mostrarEstadoPython() }
     else if (data.id !== idAtual) return
-    else if (data.tipo === 'executando') { vigia = setTimeout(estourou, passo().limite || LIMITE_MS); aviso('Executando…') }
+    else if (data.tipo === 'executando') { vigia = setTimeout(estourou, passo().limite || LIMITE_MS); aviso(L('Executando…', 'Running…')) }
     else if (data.tipo === 'resultado') { clearTimeout(vigia); terminou(data.res) }
   }
   worker.onerror = () => { python = 'falhou'; mostrarEstadoPython() }
@@ -99,9 +99,36 @@ function estourou() {
   abrirPython()
   fimDeRodada()
   $('#saida').textContent = ''
-  mostrarResultado($('#resultado'), 'erro', `O código ficou executando por mais de ${Math.round((passo().limite || LIMITE_MS) / 1000)} segundos e foi parado. Alguma repetição pode não ter fim.`)
+  mostrarResultado($('#resultado'), 'erro', L(`O código ficou executando por mais de ${Math.round((passo().limite || LIMITE_MS) / 1000)} segundos e foi parado. Alguma repetição pode não ter fim.`, `The code ran for more than ${Math.round((passo().limite || LIMITE_MS) / 1000)} seconds and was stopped. A loop may never end.`))
 }
 const aviso = (t) => { $('#estado').textContent = t }
+
+// A Pesquisa é em inglês: nas lições dela, os textos da interface trocam de língua.
+let EN = false
+const L = (pt, en) => (EN ? en : pt)
+const AJUDA_ERRO_EN = {
+  SyntaxError: 'Python could not read this line. Check for a missing parenthesis, colon, quote or sign.',
+  IndentationError: 'The indentation is wrong. A line inside a function or a for loop starts with 4 spaces.',
+  TabError: 'The indentation mixes tabs and spaces. Use spaces only.',
+  NameError: 'Python does not know this name. Check that it is spelled the same everywhere and defined before it is used.',
+  TypeError: 'A calculation received a type it does not accept. Check that the function has a return.',
+  ZeroDivisionError: 'There was a division by zero.',
+  IndexError: 'The list has no such position. Counting starts at zero.',
+  ModuleNotFoundError: 'This library does not exist here. Check the name in the import.',
+}
+function aplicarIdioma() {
+  document.documentElement.lang = EN ? 'en' : 'pt-BR'
+  $('#porque h2').textContent = L('Por que esta lição', 'Why this lesson')
+  $('#tarefa-box h2').textContent = L('Sua vez', 'Your turn')
+  $('#pratica-mat .cartao h2').textContent = L('Sua vez', 'Your turn')
+  $('#ver-dica').textContent = L('Ver uma dica', 'Show a hint')
+  $('#ver-solucao').textContent = L('Ver a solução', 'Show the solution')
+  $('#rodar').textContent = L('Executar', 'Run')
+  $('#recomecar').textContent = L('Recomeçar', 'Reset')
+  $('.console__t').textContent = L('Saída', 'Output')
+  $('#abrir-lista').textContent = L('Lições', 'Lessons')
+  $('#lista-fechar').textContent = L('Fechar', 'Close')
+}
 
 const AJUDA_ERRO = {
   SyntaxError: 'O Python não entendeu a escrita desta linha. Veja se falta um parêntese, os dois-pontos, as aspas ou um sinal.',
@@ -122,7 +149,7 @@ function executar() {
   $('#saida').textContent = ''
   $('#figura').hidden = true
   $('#resultado').hidden = true
-  aviso(python === 'pronto' ? 'Executando…' : 'Preparando o Python (só na primeira vez, leva alguns segundos)…')
+  aviso(python === 'pronto' ? L('Executando…', 'Running…') : L('Preparando o Python (só na primeira vez, leva alguns segundos)…', 'Loading Python (only the first time, it takes a few seconds)…'))
   idAtual++
   worker.postMessage({ id: idAtual, codigo: editor.getValue(), checagem: passo().checagem })
 }
@@ -152,8 +179,8 @@ function terminou(r) {
   }
   errou()
   if (r.erro) {
-    const onde = r.erro.linha ? `Linha ${r.erro.linha}. ` : ''
-    const ajuda = AJUDA_ERRO[r.erro.tipo] || 'O código parou com um erro.'
+    const onde = r.erro.linha ? `${L('Linha', 'Line')} ${r.erro.linha}. ` : ''
+    const ajuda = (EN ? AJUDA_ERRO_EN : AJUDA_ERRO)[r.erro.tipo] || L('O código parou com um erro.', 'The code stopped with an error.')
     mostrarResultado($('#resultado'), 'erro', `${onde}${ajuda}`, `${r.erro.tipo}: ${r.erro.msg}`)
   } else mostrarResultado($('#resultado'), 'erro', r.falha)
 }
@@ -203,7 +230,7 @@ function montarExercicio(p) {
   const b = document.createElement('button')
   b.className = 'botao botao--verificar'
   b.id = 'verificar'
-  b.textContent = 'Verificar'
+  b.textContent = L('Verificar', 'Check')
   f.append(b)
   f.onsubmit = (e) => {
     e.preventDefault()
@@ -217,7 +244,7 @@ function montarExercicio(p) {
       inp.classList.toggle('campo--errado', !!t && !ok)
       inp.classList.toggle('campo--certo', !!ok)
     })
-    if (vazio && !certo) { mostrarResultado($('#resultado-mat'), 'erro', inputs.length > 1 ? 'Preencha todos os campos.' : 'Escreva a sua resposta.'); return }
+    if (vazio && !certo) { mostrarResultado($('#resultado-mat'), 'erro', inputs.length > 1 ? L('Preencha todos os campos.', 'Fill in all the fields.') : L('Escreva a sua resposta.', 'Write your answer.')); return }
     if (certo) { marcarFeito(); mostrarResultado($('#resultado-mat'), 'ok'); return }
     errou()
     mostrarResultado($('#resultado-mat'), 'erro', p.erro)
@@ -237,7 +264,7 @@ function mostrarResultado(box, tipo, msg, tecnico) {
     return
   }
   const fimDaLicao = passoI === licao.passos.length - 1
-  add('p', 'Certo.', 'resultado__t')
+  add('p', L('Certo.', 'Correct.'), 'resultado__t')
   if (passo().certo) add('p', passo().certo, 'resultado__nota')
   const s = seguinte()
   const cap = capDe(licao), noDepois = parteDe(licao).id === 'depois'
@@ -248,8 +275,8 @@ function mostrarResultado(box, tipo, msg, tecnico) {
   if (cap.paper && cap.semFicha && fimDoCapitulo) {
     // Os papers do dia não têm ficha: o fim é implementar o núcleo e registrar no Caderno de Pesquisa.
     const n = add('p', '', 'resultado__nota')
-    n.innerHTML = `Você implementou o núcleo de ${cap.paper.autores} (${cap.paper.ano}). Para registrar no Caderno de Pesquisa da Bragat: o núcleo numa frase, o número que se reproduziu e o que a sua pergunta mostrou.`
-    if (s) botao(`Ir para o ${capSeg.titulo}`, () => ir(...s))
+    n.innerHTML = L(`Você implementou o núcleo de ${cap.paper.autores} (${cap.paper.ano}). Para registrar no Caderno de Pesquisa da Bragat: o núcleo numa frase, o número que se reproduziu e o que a sua pergunta mostrou.`, `You implemented the core of ${cap.paper.autores} (${cap.paper.ano}). For the Bragat research notebook: the core in one sentence, the number that reproduced, and what your own question showed.`)
+    if (s) botao(L(`Ir para o ${capSeg.titulo}`, `Go to ${capSeg.titulo}`), () => ir(...s))
   } else if (cap.paper && (vaiParaDepois || fimDoCapitulo)) {
     // Num capítulo de paper não há aula: depois de implementar, vem a ficha do seu próprio paper.
     const n = add('p', '', 'resultado__nota')
@@ -268,7 +295,7 @@ function mostrarResultado(box, tipo, msg, tecnico) {
     add('p', `Você chegou ao fim dos exercícios da aula ${cap.n}.${s ? '' : ' O próximo capítulo ainda está sendo preparado.'}`, 'resultado__nota')
     if (s) botao(`Ir para o Capítulo ${capSeg.n}`, () => ir(...s))
   } else if (s) {
-    const b = add('button', parteDe(licao).exercicios ? 'Próximo exercício' : fimDaLicao ? `Próxima lição: ${s[0].titulo}` : 'Próximo passo', 'botao')
+    const b = add('button', parteDe(licao).exercicios ? 'Próximo exercício' : fimDaLicao ? L(`Próxima lição: ${s[0].titulo}`, `Next lesson: ${s[0].titulo}`) : L('Próximo passo', 'Next step'), 'botao')
     b.id = 'avancar'
     b.type = 'button'
     b.onclick = () => ir(...s)
@@ -286,7 +313,9 @@ function desenharPasso() {
   erros = 0
   document.title = `${licao.titulo} · Scaffold`
   const cap = capDe(licao)
-  $('#capitulo').textContent = cap.pesquisa ? `Pesquisa · ${cap.titulo}: ${cap.paper.autores} (${cap.paper.ano})` : cap.paper ? `${cap.titulo}: ${cap.paper.autores} (${cap.paper.ano})` : cap.titulo
+  EN = !!cap.pesquisa
+  aplicarIdioma()
+  $('#capitulo').textContent = cap.pesquisa ? `Research · ${cap.titulo}: ${cap.paper.autores} (${cap.paper.ano})` : cap.paper ? `${cap.titulo}: ${cap.paper.autores} (${cap.paper.ano})` : cap.titulo
   document.querySelectorAll('.aba').forEach((a) => {
     a.classList.toggle('aba--atual', a.dataset.parte === parte.id)
     const p = cap.partes.find((x) => x.id === a.dataset.parte)
@@ -297,13 +326,13 @@ function desenharPasso() {
   })
   const nDaParte = licoesDa(parte).indexOf(licao) + 1
   // Depois da aula, cada lição é um exercício só, sem contexto nem passos.
-  $('#licao-n').textContent = parte.exercicios ? `${parte.titulo}, exercício ${nDaParte} de ${licoesDa(parte).length}` : `${parte.titulo}, lição ${nDaParte} de ${licoesDa(parte).length}`
+  $('#licao-n').textContent = parte.exercicios ? `${parte.titulo}, exercício ${nDaParte} de ${licoesDa(parte).length}` : L(`${parte.titulo}, lição ${nDaParte} de ${licoesDa(parte).length}`, `${parte.titulo}, lesson ${nDaParte} of ${licoesDa(parte).length}`)
   $('#licao-t').textContent = licao.titulo
   // O contexto da aula abre a lição: aparece só no primeiro passo.
   $('#porque').hidden = passoI !== 0 || !licao.porque
   $('#passos').hidden = licao.passos.length === 1
-  $('#voltar').textContent = parte.exercicios ? 'Voltar ao exercício anterior' : 'Voltar ao passo anterior'
-  $('#pular').textContent = parte.exercicios ? 'Pular este exercício' : 'Pular este passo'
+  $('#voltar').textContent = parte.exercicios ? 'Voltar ao exercício anterior' : L('Voltar ao passo anterior', 'Back to the previous step')
+  $('#pular').textContent = parte.exercicios ? 'Pular este exercício' : L('Pular este passo', 'Skip this step')
   $('#porque-t').textContent = licao.porque
   $('#texto').innerHTML = p.texto
   desenharPontos()
@@ -350,7 +379,7 @@ let capDaLista = null
 function desenharLista(cap = capDaLista || capDe(licao)) {
   $('#lista-titulo').textContent = cap.titulo
   $('#lista-intro').innerHTML = cap.paper && cap.intro
-    ? `${cap.intro} O paper: <a href="${cap.paper.url}" target="_blank" rel="noopener">${cap.paper.autores} (${cap.paper.ano})</a>.`
+    ? `${cap.intro} ${cap.pesquisa ? 'The paper' : 'O paper'}: <a href="${cap.paper.url}" target="_blank" rel="noopener">${cap.paper.autores} (${cap.paper.ano})</a>.`
     : cap.paper
     ? `O método para implementar um paper no estilo do Karpathy, aplicado a <a href="${cap.paper.url}" target="_blank" rel="noopener">${cap.paper.autores} (${cap.paper.ano})</a>. Primeiro ler, depois implementar; a última parte leva o método para um paper seu.`
     : `A matemática e a programação para compreender a <a href="${cap.aula}" target="_blank" rel="noopener">aula ${cap.n}</a> de <a href="${CURSO}" target="_blank" rel="noopener">Neural Networks: Zero to Hero</a>, de Andrej Karpathy. Não é preciso saber nada antes. As duas primeiras partes são independentes: comece pela que quiser. Quando há uma parte "Depois da aula", ela é para depois de assistir.`
@@ -511,8 +540,8 @@ function desenharPesquisa() {
             ${c.partes.map((x) => `<div><dt>${x.titulo}</dt><dd>${x.modulos.map((m) => m.titulo).join(', ')}</dd>${barrinha(contar(licoesDa(x)))}</div>`).join('')}
           </dl>
           <div class="cap__acoes">
-            ${ok ? '<span class="selo selo--ok">Paper feito</span>' : `<a class="botao" href="#${l.id}/${i}">${contar(tudo).feitos ? 'Continuar' : 'Começar'}</a>`}
-            <button class="link" type="button" data-abrir-lista="${p.n}">Ver as lições</button>
+            ${ok ? '<span class="selo selo--ok">Done</span>' : `<a class="botao" href="#${l.id}/${i}">${contar(tudo).feitos ? 'Continue' : 'Start'}</a>`}
+            <button class="link" type="button" data-abrir-lista="${p.n}">See the lessons</button>
           </div>
         </article>
       </li>`
@@ -536,15 +565,17 @@ function desenharInicio() {
   $('#capa-onde').textContent = `Você parou em: Capítulo ${o.cap.n}, ${parteDe(o.l).titulo}, ${o.l.titulo}.`
   // O paper do dia: o último da trilha de Pesquisa.
   const pd = PESQUISA[PESQUISA.length - 1], cpd = capN(pd.n), tudo = cpd.partes.flatMap(licoesDa), [lp, ip] = primeiroPorFazer(tudo)
-  $('#capa-pes-t').textContent = `${pd.titulo} · ${pd.data}`
-  $('#capa-pes-p').innerHTML = `${pd.constroi} <a href="${pd.url}" target="_blank" rel="noopener">O paper.</a>`
-  $('#capa-pes-seguir').textContent = feito(tudo) ? 'Rever' : contar(tudo).feitos ? 'Continuar' : 'Começar'
+  $('#capa-pes-data').textContent = `${pd.ref} · ${pd.data}`
+  $('#capa-pes-t').textContent = pd.titulo
+  $('#capa-pes-p').innerHTML = `${pd.constroi} <a href="${pd.url}" target="_blank" rel="noopener">The paper.</a>`
+  $('#capa-pes-seguir').textContent = feito(tudo) ? 'Review' : contar(tudo).feitos ? 'Continue' : 'Start'
   $('#capa-pes-seguir').href = `#${lp.id}/${ip}`
   const t = TRILHA.find((x) => x.n === o.cap.n)
-  $('#agora').innerHTML = cartaoCapitulo(t) + cartaoAula(t, false) + (licoesDepois(o.cap).length ? `<div class="agora__largo">${cartaoDepois(t)}</div>` : '')
+  if ($('#agora')) $('#agora').innerHTML = cartaoCapitulo(t) + cartaoAula(t, false) + (licoesDepois(o.cap).length ? `<div class="agora__largo">${cartaoDepois(t)}</div>` : '')
 }
 function desenharTela() {
   const fora = tela !== 'licao'
+  if (fora) { EN = false; aplicarIdioma() }
   $('.app').classList.toggle('app--fora', fora)
   $('#tela-inicio').hidden = tela !== 'inicio'
   $('#tela-trilha').hidden = tela !== 'trilha'
@@ -558,7 +589,7 @@ function desenharTela() {
   abrirLista(false)
   if (tela === 'inicio') { document.title = 'Scaffold'; desenharInicio() }
   else if (tela === 'trilha') { document.title = 'Engenharia · Scaffold'; desenharTrilha(); desenharPapers() }
-  else if (tela === 'pesquisa') { document.title = 'Pesquisa · Scaffold'; desenharPesquisa() }
+  else if (tela === 'pesquisa') { document.title = 'Research · Scaffold'; desenharPesquisa() }
   else { desenharPasso(); return }
   desenharLista()
   window.scrollTo(0, 0)
