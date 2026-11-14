@@ -191,6 +191,15 @@ function montarExercicio(p) {
   const cx = $('#respostas')
   cx.textContent = ''
   $('#resultado-mat').hidden = true
+  // Um passo só de leitura (a figura do paper, em Research): basta continuar.
+  if (!p.opcoes && !p.campos) {
+    const b = document.createElement('button')
+    b.className = 'botao'
+    b.textContent = L('Continuar', 'Continue')
+    b.onclick = () => { b.disabled = true; marcarFeito(); mostrarResultado($('#resultado-mat'), 'ok') }
+    cx.append(b)
+    return
+  }
   if (p.opcoes) {
     p.opcoes.forEach((o) => {
       const b = document.createElement('button')
@@ -264,7 +273,7 @@ function mostrarResultado(box, tipo, msg, tecnico) {
     return
   }
   const fimDaLicao = passoI === licao.passos.length - 1
-  add('p', L('Certo.', 'Correct.'), 'resultado__t')
+  if (passo().opcoes || passo().campos || passo().inicio !== undefined) add('p', L('Certo.', 'Correct.'), 'resultado__t')
   if (passo().certo) add('p', passo().certo, 'resultado__nota')
   const s = seguinte()
   const cap = capDe(licao), noDepois = parteDe(licao).id === 'depois'

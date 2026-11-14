@@ -210,6 +210,44 @@ function valorDasEpocas(el, s) {
   desenha()
 }
 
+// ── Research: uma figura do próprio paper, com uma animação por cima. Cada passo escurece o resto da figura,
+// desenha o contorno da parte da vez e explica em texto. As marcas usam as coordenadas da imagem original.
+function figuraDoPaper(el, s) {
+  const caixa = document.createElement('div')
+  caixa.className = 'pf'
+  caixa.innerHTML = `<p class="pf__fonte">${s.fonte}</p>
+    <div class="pf__img"><img src="${s.src}" alt="${s.alt}"><svg viewBox="0 0 ${s.w} ${s.h}" preserveAspectRatio="none" aria-hidden="true"></svg></div>
+    <p class="pf__t" aria-live="polite"></p>
+    <div class="pf__ctl"><button type="button" class="pf__b" data-d="-1" aria-label="Previous">◀</button><span class="pf__n"></span><button type="button" class="pf__b" data-d="1" aria-label="Next">▶</button><button type="button" class="pf__play">Play</button></div>`
+  el.append(caixa)
+  const svg = caixa.querySelector('svg'), txt = caixa.querySelector('.pf__t'), n = caixa.querySelector('.pf__n'), play = caixa.querySelector('.pf__play')
+  const id = 'pf' + Math.random().toString(36).slice(2, 8)
+  let i = 0, relogio = null
+  const desenha = () => {
+    const passo = s.passos[i], marcas = passo.marcas || []
+    const furos = marcas.map((m) => m.r ? `<circle cx="${m.x}" cy="${m.y}" r="${m.r + 6}" fill="#000"/>` : `<rect x="${m.x - 6}" y="${m.y - 6}" width="${m.w + 12}" height="${m.h + 12}" rx="10" fill="#000"/>`).join('')
+    const contornos = marcas.map((m) => m.r ? `<circle class="pf__m" cx="${m.x}" cy="${m.y}" r="${m.r + 6}" pathLength="1"/>` : `<rect class="pf__m" x="${m.x - 6}" y="${m.y - 6}" width="${m.w + 12}" height="${m.h + 12}" rx="10" pathLength="1"/>`).join('')
+    svg.innerHTML = marcas.length
+      ? `<defs><mask id="${id}"><rect width="${s.w}" height="${s.h}" fill="#fff"/>${furos}</mask></defs><rect class="pf__sombra" width="${s.w}" height="${s.h}" mask="url(#${id})"/>${contornos}`
+      : ''
+    txt.innerHTML = passo.t
+    n.textContent = `${i + 1} / ${s.passos.length}`
+    caixa.querySelector('[data-d="-1"]').disabled = i === 0
+    caixa.querySelector('[data-d="1"]').disabled = i === s.passos.length - 1
+  }
+  const parar = () => { clearInterval(relogio); relogio = null; play.textContent = 'Play' }
+  caixa.querySelectorAll('.pf__b').forEach((b) => { b.onclick = () => { parar(); i = Math.max(0, Math.min(s.passos.length - 1, i + +b.dataset.d)); desenha() } })
+  play.onclick = () => {
+    if (relogio) { parar(); return }
+    if (i === s.passos.length - 1) i = 0
+    else i++
+    desenha()
+    play.textContent = 'Pause'
+    relogio = setInterval(() => { if (i >= s.passos.length - 1) { parar(); return } i++; desenha() }, 4200)
+  }
+  desenha()
+}
+
 export function montarFigura(el, s) {
   el.textContent = ''
   if (!s) { el.hidden = true; return }
@@ -217,6 +255,7 @@ export function montarFigura(el, s) {
 
   if (s.modo === 'paper') { capaDoPaper(el, s); return }
   if (s.modo === 'epocas') { valorDasEpocas(el, s); return }
+  if (s.modo === 'paperfig') { figuraDoPaper(el, s); return }
 
   const leitura = document.createElement('p')
   leitura.className = 'fig__leitura'
