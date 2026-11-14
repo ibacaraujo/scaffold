@@ -1,4 +1,4 @@
-// Research, Paper 1: the first paper of the day (Nov 13, 2026). The Research track is in English. It
+// Research: the first paper of the day (Nov 13, 2026). The Research track is in English. It
 // records, one per day, papers from the research line (language models, and language as a tool for
 // learning, in the spirit of Vygotsky), implemented at their core so that the implementation teaches.
 //
@@ -148,7 +148,7 @@ const ex = (id, titulo, porque, passo) => ({ id, titulo, porque, passos: [passo]
 
 export const PESQUISA_1 = {
   n: 11,
-  titulo: 'Paper 1',
+  titulo: 'Latent Feedback Is a Compute and Data Amplifier',
   pesquisa: true,
   semFicha: true,
   paper: {
@@ -158,28 +158,30 @@ export const PESQUISA_1 = {
     url: 'https://www.alphaxiv.org/abs/2611.latent-feedback-transformers-scaling-law',
   },
   aula: 'https://www.alphaxiv.org/abs/2611.latent-feedback-transformers-scaling-law',
-  intro: 'Research, Paper 1 (Nov 13, 2026): Latent Feedback Is a Compute and Data Amplifier. First the cover and the method in a diagram; then the paper, read from scratch; then the core, implemented in the browser.',
+  intro: 'Nov 13, 2026. First the method in one diagram; then the paper, section by section, with every formula worked by hand and in code; then the core, implemented in the browser.',
   partes: [
     {
       id: 'matematica',
       titulo: 'Read the paper',
       modulos: [
         {
-          titulo: 'The idea',
+          titulo: 'The paper',
           licoes: [
             {
               id: 'r1-capa',
               titulo: 'The paper in one diagram',
-              porque: 'Before the pages, the whole method at once. The diagram is the paper in five stages; click each one.',
+              porque: 'Before the pages, the whole method at once. Then we read the paper section by section, in its own order: the introduction, the background, the comparison and the results.',
               passos: [
                 {
-                  texto: `<p>Today's paper: <strong>Latent Feedback Is a Compute and Data Amplifier</strong>, by Benhao Huang, Chaitanya Dwivedi, Xuezhe Ma, Alexander Moreno and Hector Liu (Institute of Foundation Models, USC and CMU), published on November 13, 2026.</p>
-<p>Its question fits in one sentence: <em>when good data runs out, is it better to train on the same data again, or to let the model feed its own state into the next token?</em></p>
-<p>Go through the five stages of the diagram. Each one becomes a lesson, and then a line of code.</p>`,
+                  texto: `<p>Today's paper: <strong>Latent Feedback Is a Compute and Data Amplifier: Scaling Law for Latent Feedback Transformers on Repeated Data</strong>, by Benhao Huang, Chaitanya Dwivedi, Xuezhe Ma, Alexander Moreno and Hector Liu (Institute of Foundation Models, USC and CMU), published on November 13, 2026.</p>
+<p>Its question, in one sentence: <em>when good data runs out, is it better to train on the same data again, or to let the model feed its own state into the next token?</em></p>
+<p>Its answer: once each parameter has seen enough unique data, feeding the state back wins. It reaches the same loss with up to 48% less compute, or with up to 47% less unique data.</p>
+<p>The diagram on the right is the method in five stages. Click each one. Then, lesson by lesson, we read the paper in its own order:</p>
+<ul><li><strong>§1 Introduction</strong>: why repeated data pays less;</li><li><strong>§2 Background</strong>: the feedback equation and how to train it;</li><li><strong>§3 Scaling law</strong>: how the two models are compared;</li><li><strong>§5 Results</strong>: what the numbers say.</li></ul>`,
                   figura: {
                     modo: 'paper',
                     desenho: 'feedback',
-                    tag: 'Research · Paper 1 · Nov 13, 2026',
+                    tag: 'Research · Nov 13, 2026',
                     titulo: 'Latent Feedback Is a Compute and Data Amplifier',
                     autores: 'Huang, Dwivedi, Ma, Moreno & Liu (IFM, USC, CMU)',
                     abrir: 'open the paper',
@@ -202,103 +204,351 @@ export const PESQUISA_1 = {
                   erro: 'Go back to stage 3 of the diagram.',
                   dica: 'In stage 3, the arrow leaves the top of one token and lands at the input of the next.',
                   solucao: 'The previous token\'s top-layer state: u_t = e_t + W rms(h_{t−1}).',
-                  certo: 'That is the core. The next lessons build each piece from scratch.',
+                  certo: 'That is the core. Now the paper, section by section.',
                 },
               ],
             },
+          ],
+        },
+        {
+          titulo: '§1 Introduction',
+          licoes: [
             {
               id: 'r1-epocas',
               titulo: 'When data runs out',
-              porque: 'The paper exists because of a practical problem: the world\'s good text is running out, and training again on the same data pays less each time.',
+              porque: 'The paper opens with a practical problem: high-quality text is running out, and reading the same text again teaches less each time. Everything else in the paper is a way around this.',
               passos: [
                 {
-                  texto: `<p>A language model learns by reading text. An <strong>epoch</strong> is one full read of the data. When the good text runs out, the usual way out is to read the same data again: two, three, four epochs.</p>
-<p>But each repeat teaches less than the one before. The paper uses the rule of Muennighoff et al. (2023): epoch number <code>k</code> is worth <code>e<sup>−(k−1)/R*</sup></code> of a fresh read. The first is worth 1, and the next ones less and less. <code>R*</code> says how slowly the worth decays.</p>
-<p>Move the sliders: each bar is the worth of one epoch.</p>`,
+                  texto: `<p>A language model learns by reading text. One <strong>epoch</strong> is one full read of the training data. When there is no more good text, the usual way out is to read the same text again: a second epoch, a third, a fourth.</p>
+<p>The problem is that each repeat teaches less than the one before. The paper measures this with a rule from an earlier paper (Muennighoff et al., 2023):</p>
+<div class="trecho"><p class="trecho__fonte">From the paper, §3</p><p>Epoch <i>k</i> is worth about <span class="eq"><i>e</i><sup>−(<i>k</i>−1)/<i>R</i>*</sup></span> of a fresh one.</p></div>
+<p>Let us read this slowly, piece by piece.</p>
+<ul><li><strong><i>e</i></strong> is a fixed number, about <code>2.718</code>. It shows up whenever something shrinks (or grows) by the same fraction at every step.</li>
+<li>A <strong>negative exponent</strong> means "one divided by": <i>e</i><sup>−1</sup> = 1 / <i>e</i> ≈ 1 / 2.718 ≈ 0.368. The bigger the exponent, the smaller the result.</li>
+<li><strong><i>R</i>*</strong> is a number fitted from data. It says how slowly the worth decays: a big <i>R</i>* means repeats stay useful for longer.</li></ul>
+<p><strong>A worked example</strong>, with <i>R</i>* = 2:</p>
+<ul><li>Epoch 1: the exponent is −(1 − 1) / 2 = 0. And <i>e</i><sup>0</sup> = 1, because any number to the power 0 is 1. The first read is worth one fresh read, as it should.</li>
+<li>Epoch 3: the exponent is −(3 − 1) / 2 = −1. So the worth is <i>e</i><sup>−1</sup> ≈ 0.368: the third read teaches about a third of a fresh one.</li></ul>
+<p>The bars on the right show this. Move <i>R</i>* and watch the bars fall faster or slower.</p>`,
                   figura: { modo: 'epocas', rEstrela: 2, epocas: 4 },
-                  tarefa: 'With <code>R* = 2</code>, what is the second epoch worth? (Use <code>e<sup>−0.5</sup> ≈ 0.607</code>.)',
-                  campos: [{ rotulo: 'worth of epoch 2 =', resposta: 0.607, tol: 0.01 }],
-                  erro: 'Put k = 2 and R* = 2 in the exponent: −(2 − 1) / 2.',
-                  dica: 'The exponent is −1/2 = −0.5, and e<sup>−0.5</sup> ≈ 0.607.',
-                  solucao: 'e^(−(2−1)/2) = e^(−0.5) ≈ 0.607: the second read is worth about 61% of fresh data.',
-                  certo: 'That is the problem: spending compute on more epochs buys less and less. The paper asks whether there is a better way to spend that same compute.',
+                  tarefa: 'With <i>R</i>* = 2, what is the exponent for epoch <i>k</i> = 2? Then use <i>e</i><sup>−0.5</sup> ≈ 0.607 for the worth.',
+                  campos: [{ rotulo: 'exponent =', resposta: -0.5, tol: 0.001 }, { rotulo: 'worth of epoch 2 =', resposta: 0.607, tol: 0.01 }],
+                  erro: 'The exponent is −(k − 1) / R*. Put k = 2 and R* = 2.',
+                  dica: '−(2 − 1) / 2 = −1/2 = −0.5. The worth is e<sup>−0.5</sup>, and the task gives it: about 0.607. You can also read it off the second bar.',
+                  solucao: 'Exponent: −(2 − 1) / 2 = −0.5. Worth: e^(−0.5) ≈ 0.607, about 61% of a fresh read.',
+                  certo: 'The second bar on the right shows the same 0.607. Now let Python do the arithmetic.',
+                },
+                {
+                  texto: `<p>Karpathy's habit: as soon as a formula appears, write it in code and print it. The code is the formula, with nothing hidden.</p>
+<p>In Python, <i>e</i><sup>x</sup> is <code>math.exp(x)</code>. So the paper's rule becomes one line:</p>
+<pre><code>math.exp(-(k - 1) / R)</code></pre>
+<p>Read it from the inside out: <code>k - 1</code>, then divide by <code>R</code>, then the minus sign, then <code>exp</code>. It is exactly <i>e</i><sup>−(<i>k</i>−1)/<i>R</i>*</sup>.</p>`,
+                  tarefa: 'Complete <code>worth(k, R)</code> with that line. The code prints the worth of epochs 1 to 4, and their sum.',
+                  inicio: `import math
+
+def worth(k, R):
+    return 1.0   # replace: the paper's rule, e to the power -(k - 1) / R
+
+R = 2
+for k in range(1, 5):
+    print(f"epoch {k}: worth {worth(k, R):.3f}")
+
+total = sum(worth(k, R) for k in range(1, 5))
+print(f"4 epochs are worth {total:.3f} fresh epochs")
+`,
+                  dica: '<code>return math.exp(-(k - 1) / R)</code>.',
+                  solucao: `import math
+
+def worth(k, R):
+    return math.exp(-(k - 1) / R)
+
+R = 2
+for k in range(1, 5):
+    print(f"epoch {k}: worth {worth(k, R):.3f}")
+
+total = sum(worth(k, R) for k in range(1, 5))
+print(f"4 epochs are worth {total:.3f} fresh epochs")
+`,
+                  checagem: `
+if abs(worth(2, 2) - 0.60653) > 1e-3 or abs(worth(1, 2) - 1) > 1e-9:
+    falha('For k = 2 and R = 2 the worth should be about 0.607, and for k = 1 exactly 1. Use math.exp(-(k - 1) / R).')
+`,
+                  certo: 'Four reads of the same data are worth only about 2.2 fresh ones. That is the waste the paper wants to avoid: compute spent on repeats buys less and less.',
                 },
               ],
             },
+          ],
+        },
+        {
+          titulo: '§2 Background',
+          licoes: [
             {
               id: 'r1-estado',
               titulo: 'The top-layer state',
-              porque: 'The feedback sends back one specific vector of the model, the last layer\'s state. It is worth knowing what it is before seeing where it goes.',
+              porque: 'The feedback sends back one specific vector of the model: the last layer\'s state. Before the equation, it is worth seeing what that vector is.',
               passos: [
                 {
-                  texto: `<p>A neural network is a sequence of layers. Each layer receives a list of numbers (a <strong>vector</strong>), does some arithmetic and passes another vector on.</p>
-<p>The vector that leaves the last layer, at a point in the text, is the <strong>top-layer state</strong>, <code>h</code>. The model takes its prediction of the next word from it. It is the result of all the work the model did up to that point.</p>
-<p>In a plain Transformer, once the prediction is made, this vector is not used again: the next word starts again from the bottom layers.</p>`,
+                  texto: `<p>A neural network is a sequence of layers. Each layer receives a list of numbers (a <strong>vector</strong>), does some arithmetic, and passes another vector on.</p>
+<p>In a Transformer, every token of the text gets its own column of vectors, one per layer. The vector that leaves the <strong>last</strong> layer, at the position of a token, is the <strong>top-layer state</strong>. The paper calls it <i>h</i>.</p>
+<p>The prediction of the next token is read from <i>h</i>. So <i>h</i> is the result of all the work the model did at that position. In a plain Transformer, once the prediction is made, <i>h</i> is not used again: the next token starts from the bottom layer.</p>
+<div class="trecho"><p class="trecho__fonte">From the paper, §1</p><p>A latent feedback Transformer feeds each token's top-layer state into the next token's input.</p></div>`,
                   tarefa: 'Why is the top-layer state a good candidate to pass on?',
                   opcoes: [
                     { t: 'Because it is the most processed vector: it has gone through every layer.', certa: true },
                     { t: 'Because it is the smallest vector in the model.', por: 'Size is not the reason. Think about how much computation has already gone into it.' },
-                    { t: 'Because it is the written word itself.', por: 'The written word is the output. The state is the vector the output is taken from.' },
+                    { t: 'Because it is the written word itself.', por: 'The written word is the output. The state is the vector the output is read from.' },
                   ],
                   erro: 'Think about the path the vector took to get to the top.',
                   dica: 'It came out of the last layer.',
                   solucao: 'Because it has gone through every layer: it is the most elaborate summary of that point in the text.',
-                  certo: 'Passing it on gives the next word, right at its input, what the previous one concluded at the top.',
+                  certo: 'Passing it on gives the next token, right at its input, what the previous one concluded at the top.',
                 },
               ],
             },
             {
               id: 'r1-equacao',
-              titulo: 'The feedback equation',
-              porque: 'The core of the paper is equation (1). It has three pieces: the word\'s input, a map W and a normalization called rms.',
+              titulo: 'Equation (1): the feedback',
+              porque: 'Equation (1) is the core of the paper. It has three pieces: the token\'s own input, a normalization called rms, and a matrix W. We take them one at a time, by hand and then in code.',
               passos: [
                 {
-                  texto: `<p>Equation (1) of the paper:</p>
-<p style="font-size:1.15em"><code>u<sub>t</sub> = e<sub>t</sub> + W rms(h<sub>t−1</sub>)</code></p>
-<ul><li><code>e<sub>t</sub></code> is the usual input of word <code>t</code>;</li><li><code>h<sub>t−1</sub></code> is the top-layer state of the previous word;</li><li><code>rms</code> puts the vector on a standard scale;</li><li><code>W</code> is a learned matrix that translates the state into the shape of the input.</li></ul>
-<p><code>rms</code> divides the vector by the square root of the mean of its squares. Then the mean of the squares becomes 1, and a large state cannot drown the input. For <code>h = (3, 4)</code>: the mean of the squares is (9 + 16) / 2 = 12.5, and its square root is ≈ 3.536.</p>`,
-                  tarefa: 'What is each number of <code>rms((3, 4))</code>?',
-                  campos: [{ rotulo: 'first =', resposta: 0.849, tol: 0.01 }, { rotulo: 'second =', resposta: 1.131, tol: 0.01 }],
-                  erro: 'Divide 3 and 4 by 3.536.',
-                  dica: '3 / 3.536 and 4 / 3.536.',
-                  solucao: '3 / 3.536 ≈ 0.849 and 4 / 3.536 ≈ 1.131.',
-                  certo: 'Check: 0.849² + 1.131² ≈ 2, so the mean of the squares became 1. The vector changed size, not direction.',
+                  texto: `<div class="trecho"><p class="trecho__fonte">From the paper, §2, equation (1)</p><p class="eq eq--grande"><i>u<sub>t</sub></i> = <i>e<sub>t</sub></i> + <i>W</i> rms(<i>h</i><sub><i>t</i>−1</sub>)</p></div>
+<p>Each symbol, in words:</p>
+<ul><li><i>t</i> is the position of the token in the text: 1, 2, 3, …</li>
+<li><i>e<sub>t</sub></i> is the usual input of token <i>t</i>: its embedding, a vector.</li>
+<li><i>h</i><sub><i>t</i>−1</sub> is the top-layer state of the <em>previous</em> token.</li>
+<li>rms puts that state on a standard scale.</li>
+<li><i>W</i> is a matrix the model learns. It turns the state into a vector the same size as <i>e<sub>t</sub></i>, so the two can be added.</li>
+<li><i>u<sub>t</sub></i> is what actually enters the layers: the token plus what the previous token concluded.</li></ul>
+<p><strong>First piece: rms.</strong> rms stands for "root mean square". It is three operations, in this order:</p>
+<ol><li><strong>square</strong> every number of the vector;</li><li>take the <strong>mean</strong> of those squares;</li><li>take the square <strong>root</strong> of that mean.</li></ol>
+<p>Then the vector is divided by that number. Worked example, <i>h</i> = (3, 4):</p>
+<ol><li>squares: 3² = 9 and 4² = 16;</li><li>mean: (9 + 16) / 2 = 12.5;</li><li>root: √12.5 ≈ 3.536.</li></ol>
+<p>So rms(<i>h</i>) = (3 / 3.536, 4 / 3.536) ≈ (0.849, 1.131).</p>
+<p>Why do this? After dividing, the mean of the squares is exactly 1, whatever the original size. A huge state cannot drown the token's own input.</p>`,
+                  tarefa: 'Do the three operations for <i>h</i> = (6, 8): the mean of the squares, then the square root.',
+                  campos: [{ rotulo: 'mean of the squares =', resposta: 50, tol: 0.01 }, { rotulo: 'root =', resposta: 7.071, tol: 0.01 }],
+                  erro: 'Square each number (36 and 64), take their mean, then the square root.',
+                  dica: '(36 + 64) / 2 = 50, and √50 ≈ 7.071.',
+                  solucao: 'Squares: 36 and 64. Mean: 50. Root: √50 ≈ 7.071. So rms(6, 8) = (6/7.071, 8/7.071) ≈ (0.849, 1.131): the same as for (3, 4), because (6, 8) points in the same direction.',
+                  certo: 'rms(6, 8) is the same vector as rms(3, 4): rms keeps the direction and throws away the size.',
+                },
+                {
+                  texto: `<p>Now the same three operations in code, with numpy, the library Karpathy uses for arrays of numbers. With numpy, an operation on an array applies to every number at once:</p>
+<pre><code>h ** 2          # squares every number
+(h ** 2).mean() # their mean
+np.sqrt(...)    # the square root</code></pre>
+<p>The code has each operation on its own line, with a name, just like the three steps above.</p>`,
+                  tarefa: 'Fill in the line <code>root = ...</code>: the square root of <code>mean</code>, with <code>np.sqrt</code>.',
+                  inicio: `import numpy as np
+
+h = np.array([3.0, 4.0])
+
+squares = h ** 2           # 1. square every number
+mean = squares.mean()      # 2. the mean of the squares
+root = 1.0                 # 3. replace: the square root of the mean
+out = h / root             # divide the vector by it
+
+print("squares:", squares)
+print("mean:", mean)
+print("root:", round(root, 3))
+print("rms(h):", out.round(3))
+print("mean of the squares after rms:", (out ** 2).mean().round(3))
+`,
+                  dica: '<code>root = np.sqrt(mean)</code>.',
+                  solucao: `import numpy as np
+
+h = np.array([3.0, 4.0])
+
+squares = h ** 2           # 1. square every number
+mean = squares.mean()      # 2. the mean of the squares
+root = np.sqrt(mean)       # 3. the square root of the mean
+out = h / root             # divide the vector by it
+
+print("squares:", squares)
+print("mean:", mean)
+print("root:", round(root, 3))
+print("rms(h):", out.round(3))
+print("mean of the squares after rms:", (out ** 2).mean().round(3))
+`,
+                  checagem: `
+if abs(root - 3.53553) > 1e-3:
+    falha('The root should be about 3.536, the square root of 12.5. Use np.sqrt(mean).')
+`,
+                  certo: 'The last line printed 1.0: after rms, the mean of the squares is always 1. The Implement part uses this same function, written in one line.',
+                },
+                {
+                  texto: `<p><strong>Second piece: the matrix <i>W</i>.</strong> Multiplying a matrix by a vector gives a new vector. Each number of the result is one row of the matrix "against" the vector: multiply number by number, then add.</p>
+<p>Worked example, with</p>
+<p class="eq"><i>W</i> = [[1, 0], [0, 2]] and rms(<i>h</i>) = (0.849, 1.131):</p>
+<ul><li>first row (1, 0): 1 · 0.849 + 0 · 1.131 = 0.849;</li><li>second row (0, 2): 0 · 0.849 + 2 · 1.131 = 2.262.</li></ul>
+<p>So <i>W</i> rms(<i>h</i>) = (0.849, 2.262). This <i>W</i> keeps the first number and doubles the second. In the real model, <i>W</i> is learned: training decides which parts of the state matter for the next token.</p>
+<p><strong>Third piece: the sum.</strong> Vectors are added number by number. If the token's input is <i>e<sub>t</sub></i> = (1, 1), then <i>u<sub>t</sub></i> = (1 + 0.849, 1 + 2.262).</p>`,
+                  tarefa: 'Finish equation (1): with <i>e<sub>t</sub></i> = (1, 1) and <i>W</i> rms(<i>h</i>) = (0.849, 2.262), what is <i>u<sub>t</sub></i>?',
+                  campos: [{ rotulo: 'first number =', resposta: 1.849, tol: 0.01 }, { rotulo: 'second number =', resposta: 3.262, tol: 0.01 }],
+                  erro: 'Add number by number: 1 + 0.849 and 1 + 2.262.',
+                  dica: '1 + 0.849 = 1.849 and 1 + 2.262 = 3.262.',
+                  solucao: 'u_t = (1.849, 3.262). That vector is what enters the layers for token t.',
+                  certo: 'That is the whole of equation (1): rms, then W, then a sum. In numpy, it is the line e + rms(h) @ W of the Implement part, where @ is matrix multiplication.',
                 },
               ],
             },
             {
               id: 'r1-passadas',
-              titulo: 'Two passes, one gradient',
-              porque: 'Feedback creates a problem in training. The paper\'s solution (equation 2 and Algorithm 1) sets its cost, and the cost decides the comparison.',
+              titulo: 'Equation (2) and Algorithm 1: two passes',
+              porque: 'Equation (1) has a catch in training: token t needs a state that only exists after the network has run. Equation (2) and Algorithm 1 are the paper\'s way out, and they decide how much feedback costs.',
               passos: [
                 {
-                  texto: `<p>In training, the model reads all the words of a text at once, in parallel. But word <code>t</code> needs the top-layer state of word <code>t − 1</code>, which only exists after the network has run.</p>
-<p>The paper's solution: run twice. The <strong>first pass</strong> runs without feedback and without gradient, only to get the states. The <strong>second</strong> runs with those states fed back, and only it computes the gradient.</p>
-<p>The cost: one training pass costs about 3 units (1 to go forward and 2 for the gradient to come back). The extra pass, forward only, costs 1, that is, 1/3 more. The paper only does the extra pass part of the time: with probability <code>p = 0.15</code> it runs a single pass. So the cost is <code>c = 1 + (1 − p) / 3</code>.</p>`,
-                  tarefa: 'With <code>p = 0.15</code>, what is <code>c</code>?',
-                  campos: [{ rotulo: 'c =', resposta: 1.283, tol: 0.005 }],
-                  erro: 'Compute (1 − 0.15) / 3 and add 1.',
-                  dica: '0.85 / 3 ≈ 0.283.',
-                  solucao: 'c = 1 + 0.85 / 3 ≈ 1.283. The paper measures 1.20 to 1.27 on the clock.',
-                  certo: 'At equal compute, the feedback model trains c times fewer epochs. That is the paper\'s trade: fewer repeats, more work per word.',
+                  texto: `<p>In training, the model reads every token of a text at once, in parallel. That is what makes Transformers fast. But equation (1) asks, for token <i>t</i>, for the state of token <i>t</i> − 1, and that state only exists once the network has run. A chicken-and-egg problem.</p>
+<p>The paper's answer is to run the network several times, each time feeding in the states from the time before:</p>
+<div class="trecho"><p class="trecho__fonte">From the paper, §2, equation (2)</p><p class="eq"><i>u<sub>t</sub></i><sup>(<i>p</i>+1)</sup> = <i>e<sub>t</sub></i> + <i>W</i> rms(<i>h</i><sub><i>t</i>−1</sub><sup>(<i>p</i>)</sup>), &nbsp; <i>h</i><sub><i>t</i>−1</sub><sup>(<i>p</i>)</sup> = <i>f</i>(<i>u</i><sub><i>t</i>−1</sub><sup>(<i>p</i>)</sup>)</p></div>
+<p>The little <sup>(<i>p</i>)</sup> counts the passes. Pass 1 has no feedback at all. Pass 2 uses the states that pass 1 produced. Pass 3 uses those of pass 2. And so on.</p>
+<p>Why does this work? Look at the first tokens:</p>
+<ul><li>token 1 has no token before it, so its state is right from pass 1;</li><li>in pass 2, token 2 receives the right state of token 1, so its state is now right too;</li><li>in pass 3, token 3 receives the right state of token 2, and so on.</li></ul>
+<p>After enough passes, the states stop changing: that is the <strong>fixed point</strong>, and it is exactly what a model reading token by token would compute. The paper finds that two or three passes already come close.</p>`,
+                  tarefa: 'After 2 passes, how many of the first tokens are guaranteed to have exactly the right state?',
+                  campos: [{ rotulo: 'tokens =', resposta: 2, tol: 0.001 }],
+                  erro: 'Follow the list: pass 1 fixes token 1; each new pass fixes one more.',
+                  dica: 'Pass 1 fixes token 1, pass 2 fixes token 2.',
+                  solucao: '2: after p passes, the first p tokens are exactly right. The paper\'s Appendix C says the same.',
+                  certo: 'The rest of the tokens are approximately right, and the approximation improves quickly. In the Implement part, the model is small enough to compute the exact fixed point directly, token by token.',
+                },
+                {
+                  texto: `<p>In training, the paper keeps this cheap. Its Algorithm 1 is short; here it is, as in the paper:</p>
+<div class="trecho"><p class="trecho__fonte">From the paper, §2, Algorithm 1: one training update</p><pre class="trecho__code">x = embed(tokens)
+if rand() > p:
+    with no_grad():
+        s = blocks(x)
+    # token t reads s[t−1]
+    x = x + W(rms_norm(shift(s)))
+loss = ce(head(blocks(x)), y)
+loss.backward()</pre></div>
+<p>Line by line:</p>
+<ul><li><code>x = embed(tokens)</code>: every token becomes its input vector <i>e<sub>t</sub></i>.</li>
+<li><code>if rand() > p</code>: with probability 1 − <i>p</i>, do the extra pass; with probability <i>p</i>, skip it. The paper uses <i>p</i> = 0.15.</li>
+<li><code>with no_grad(): s = blocks(x)</code>: the <strong>first pass</strong>, with no gradient. It only produces the states <code>s</code>.</li>
+<li><code>shift(s)</code>: moves the states one position forward, so token <i>t</i> receives the state of token <i>t</i> − 1.</li>
+<li><code>x = x + W(rms_norm(...))</code>: equation (1).</li>
+<li><code>loss = ...</code> and <code>loss.backward()</code>: the <strong>second pass</strong>, with the gradient. The model learns only from this one.</li></ul>`,
+                  tarefa: 'In Algorithm 1, which pass does the model learn from?',
+                  opcoes: [
+                    { t: 'The first pass, the one inside no_grad.', por: 'no_grad means "compute no gradient": nothing is learned there.' },
+                    { t: 'The second pass, the one that ends in loss.backward().', certa: true },
+                    { t: 'Both passes, equally.', por: 'Only one of them computes the gradient. Look at no_grad.' },
+                  ],
+                  erro: 'Look for the line that computes the gradient.',
+                  dica: 'backward() is the gradient going back through the network.',
+                  solucao: 'The second pass. The first only supplies the states, as a fixed input.',
+                  certo: 'This detail matters for the question at the end of the Implement part: since no gradient flows through the first pass, nothing teaches the state to keep information for later tokens.',
+                },
+                {
+                  texto: `<p>How much does feedback cost? It is worth counting carefully, because the whole comparison of the paper is made at equal compute.</p>
+<p><strong>The cost of one ordinary training update.</strong> Going forward through the network costs about 1 unit. Going back (the gradient) costs about 2 units, because for each layer it computes two things: the gradient for the weights and the gradient for the layer below. Total: about 3 units.</p>
+<p><strong>The extra pass.</strong> It goes forward only, with no gradient: about 1 unit. Relative to an ordinary update, that is 1/3 more.</p>
+<p><strong>The average.</strong> The extra pass happens only with probability 1 − <i>p</i>. So, on average, a feedback update costs</p>
+<p class="eq eq--grande"><i>c</i> = 1 + (1 − <i>p</i>) / 3</p>
+<p>times an ordinary one. Worked example, with <i>p</i> = 0.4: 1 − 0.4 = 0.6, then 0.6 / 3 = 0.2, so <i>c</i> = 1.2.</p>`,
+                  tarefa: 'Compute <code>c</code> in code, for the paper\'s <i>p</i> = 0.15.',
+                  inicio: `p = 0.15
+
+c = 1.0   # replace: 1 + (1 - p) / 3
+
+print(f"one feedback update costs {c:.3f} ordinary updates")
+print(f"with the compute of 100 ordinary epochs, feedback trains {100 / c:.1f} epochs")
+`,
+                  dica: '<code>c = 1 + (1 - p) / 3</code>.',
+                  solucao: `p = 0.15
+
+c = 1 + (1 - p) / 3
+
+print(f"one feedback update costs {c:.3f} ordinary updates")
+print(f"with the compute of 100 ordinary epochs, feedback trains {100 / c:.1f} epochs")
+`,
+                  checagem: `
+if abs(c - 1.28333) > 1e-3:
+    falha('c should be about 1.283: 1 + (1 - 0.15) / 3.')
+`,
+                  certo: 'Our count gives 1.283. The paper measures the real cost on the clock: 1.20 to 1.27, depending on the model size (Table 10). Either way, at equal compute, feedback trains about 20% fewer epochs.',
                 },
               ],
             },
+          ],
+        },
+        {
+          titulo: '§3 The comparison',
+          licoes: [
             {
               id: 'r1-kappa',
-              titulo: 'How much is saved',
-              porque: 'The paper\'s main result is a number: how much compute feedback saves to reach the same loss.',
+              titulo: 'Equation (6): how much is saved',
+              porque: 'The paper\'s results are two numbers, κ and μ. Before reading the results, it is worth knowing exactly what each one measures.',
               passos: [
                 {
-                  texto: `<p>The paper compares both models at the same size and the same unique data. It measures the <strong>compute multiplier</strong> <code>κ</code>: how many times more compute the plain Transformer needs to reach the feedback model's loss.</p>
-<p>If <code>κ = 2</code>, the plain one needs twice as much; so feedback saves half. In general, the saving is <code>1 − 1/κ</code>.</p>
-<p>The largest value measured in the paper is <code>κ = 1.91</code>, at 60 million parameters, 400 unique tokens per parameter and two epochs of compute.</p>`,
-                  tarefa: 'With <code>κ = 1.91</code>, what share of the compute does feedback save? Answer as a percentage.',
+                  texto: `<p>The paper compares the two models at the <strong>same size</strong> and the <strong>same validation loss</strong>, in two ways:</p>
+<div class="trecho"><p class="trecho__fonte">From the paper, §3, equation (6)</p><p class="eq"><i>κ</i> = <i>F<sub>T</sub></i> / <i>F</i> &nbsp; with &nbsp; <i>L<sub>T</sub></i>(<i>N</i>, <i>U</i>, <i>F<sub>T</sub></i>) = <i>L<sub>s</sub></i>(<i>N</i>, <i>U</i>, <i>F</i>)</p></div>
+<p>Symbol by symbol:</p>
+<ul><li><i>N</i>: the model size; <i>U</i>: the amount of unique data; <i>F</i>: the compute budget, counted in Transformer epochs.</li>
+<li><i>L<sub>s</sub></i>(<i>N</i>, <i>U</i>, <i>F</i>): the loss of the feedback model with budget <i>F</i>.</li>
+<li><i>F<sub>T</sub></i>: the budget the plain Transformer needs to reach that same loss.</li>
+<li><i>κ</i> (kappa), the <strong>compute multiplier</strong>: how many times more compute the Transformer needs.</li></ul>
+<p>From <i>κ</i>, the share of compute that feedback saves is 1 − 1/<i>κ</i>. Worked example from the paper's Figure 2(a): at 271M parameters with 200 unique tokens per parameter, the feedback model with <i>F</i> = 1 is matched by the Transformer only at <i>F<sub>T</sub></i> ≈ 1.19. So <i>κ</i> = 1.19 / 1 = 1.19, and the saving is 1 − 1/1.19 ≈ 0.16: 16% less compute.</p>
+<p>The second number, <i>μ</i> (mu), the <strong>data multiplier</strong>, is the same idea for unique data: how many times more unique data the Transformer needs at the same number of epochs.</p>`,
+                  tarefa: 'The largest κ measured in the paper is 1.91 (Table 7). What share of the compute does feedback save there, in percent?',
                   campos: [{ rotulo: 'saving (%) =', resposta: 47.6, tol: 0.6 }],
-                  erro: 'Compute 1 − 1/1.91 and multiply by 100.',
-                  dica: '1/1.91 ≈ 0.524.',
-                  solucao: '1 − 1/1.91 ≈ 0.476, that is, about 48% of the compute.',
-                  certo: 'That is the "up to 48%" in the paper\'s abstract. Now, the implementation.',
+                  erro: 'Compute 1 − 1/1.91, then multiply by 100.',
+                  dica: '1/1.91 ≈ 0.524, and 1 − 0.524 = 0.476.',
+                  solucao: '1 − 1/1.91 ≈ 0.476: about 48% of the compute. That is the "up to 48%" of the abstract.',
+                  certo: 'Now in code, for several κ at once.',
+                },
+                {
+                  texto: `<p>The paper's Table 7 lists the measured κ. Some of them, at 134M parameters and two epochs of compute, as the unique data per parameter grows:</p>
+<div class="trecho"><p class="trecho__fonte">From the paper, Table 7 (134M, F = 2)</p><table class="trecho__tab"><tr><th>unique tokens per parameter</th><td>12.5</td><td>25</td><td>50</td><td>100</td><td>200</td><td>400</td></tr><tr><th>κ</th><td>0.92</td><td>0.99</td><td>1.10</td><td>1.18</td><td>1.46</td><td>1.79</td></tr></table></div>
+<p>In code, a list holds the numbers, and one line turns each κ into a saving.</p>`,
+                  tarefa: 'Complete <code>savings</code>: for each <code>k</code> in <code>kappas</code>, the saving <code>1 - 1 / k</code>.',
+                  inicio: `utpp = [12.5, 25, 50, 100, 200, 400]
+kappas = [0.92, 0.99, 1.10, 1.18, 1.46, 1.79]
+
+savings = [0 for k in kappas]   # replace: 1 - 1 / k for each k
+
+for u, k, s in zip(utpp, kappas, savings):
+    print(f"{u:6} unique tokens per parameter   kappa {k:.2f}   saving {100 * s:5.1f}%")
+`,
+                  dica: '<code>savings = [1 - 1 / k for k in kappas]</code>.',
+                  solucao: `utpp = [12.5, 25, 50, 100, 200, 400]
+kappas = [0.92, 0.99, 1.10, 1.18, 1.46, 1.79]
+
+savings = [1 - 1 / k for k in kappas]
+
+for u, k, s in zip(utpp, kappas, savings):
+    print(f"{u:6} unique tokens per parameter   kappa {k:.2f}   saving {100 * s:5.1f}%")
+`,
+                  checagem: `
+if abs(savings[-1] - (1 - 1 / 1.79)) > 1e-6 or abs(savings[0] - (1 - 1 / 0.92)) > 1e-6:
+    falha('Each saving should be 1 - 1 / k, in the same order as kappas.')
+`,
+                  certo: 'The first saving is negative: with little unique data, feedback costs more than it saves. The saving grows with unique data. Today\'s models are far to the right of this table: the median 1B–10B model trains on about 1,040 tokens per parameter (§1).',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          titulo: '§5 Results',
+          licoes: [
+            {
+              id: 'r1-resultados',
+              titulo: 'Reading the results',
+              porque: 'A paper is its evidence. Here are the paper\'s own numbers, to read before reproducing the shape of the result in the Implement part.',
+              passos: [
+                {
+                  texto: `<p>The validation loss of both models at 271M parameters, with 200 unique tokens per parameter, for budgets of 1 to 4 Transformer epochs. Lower is better.</p>
+<div class="trecho"><p class="trecho__fonte">From the paper, Table 6 (271M, U = 200N)</p><table class="trecho__tab"><tr><th>budget F</th><td>1</td><td>2</td><td>3</td><td>4</td></tr><tr><th>Transformer</th><td>2.2374</td><td>2.2042</td><td>2.1885</td><td>2.1786</td></tr><tr><th>latent feedback</th><td>2.2291</td><td>2.1916</td><td>2.1738</td><td>2.1626</td></tr></table></div>
+<p>How to read it: each column is the same compute for both models. The feedback model is lower in every column. And look across: the feedback model at <i>F</i> = 3 (2.1738) is already better than the Transformer at <i>F</i> = 4 (2.1786), with a quarter less compute. That is what "a compute amplifier" means.</p>
+<p>The same table, at the scarcest data (12.5 unique tokens per parameter) and <i>F</i> = 1, shows the opposite: 2.4691 for the Transformer against 2.4907 for feedback. With too little unique data, the extra epochs the Transformer can afford are still worth almost as much as fresh data, and they win.</p>`,
+                  tarefa: 'At 271M, U = 200N and F = 2, how much lower is the feedback model\'s loss than the Transformer\'s?',
+                  campos: [{ rotulo: 'difference =', resposta: 0.0126, tol: 0.0006 }],
+                  erro: 'Subtract the two numbers in the column F = 2: 2.2042 − 2.1916.',
+                  dica: '2.2042 − 2.1916 = 0.0126.',
+                  solucao: '2.2042 − 2.1916 = 0.0126. It looks small, but to close it the Transformer needs 1.38 times the compute (Table 7).',
+                  certo: 'That is the paper read. Now the Implement part: the same comparison, on a model small enough to train in the browser.',
                 },
               ],
             },

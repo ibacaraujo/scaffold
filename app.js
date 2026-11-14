@@ -91,7 +91,7 @@ function abrirPython() {
   worker.onerror = () => { python = 'falhou'; mostrarEstadoPython() }
 }
 function mostrarEstadoPython() {
-  if (python === 'falhou') { aviso('O Python não carregou. Confira a internet e recarregue a página.'); $('#rodar').disabled = true; return }
+  if (python === 'falhou') { aviso(L('O Python não carregou. Confira a internet e recarregue a página.', 'Python did not load. Check the connection and reload the page.')); $('#rodar').disabled = true; return }
   if (!rodando && python === 'pronto') aviso('')
 }
 function estourou() {
@@ -315,7 +315,7 @@ function desenharPasso() {
   const cap = capDe(licao)
   EN = !!cap.pesquisa
   aplicarIdioma()
-  $('#capitulo').textContent = cap.pesquisa ? `Research · ${cap.titulo}: ${cap.paper.autores} (${cap.paper.ano})` : cap.paper ? `${cap.titulo}: ${cap.paper.autores} (${cap.paper.ano})` : cap.titulo
+  $('#capitulo').textContent = cap.pesquisa ? `Research · ${cap.paper.autores} (${cap.paper.ano})` : cap.paper ? `${cap.titulo}: ${cap.paper.autores} (${cap.paper.ano})` : cap.titulo
   document.querySelectorAll('.aba').forEach((a) => {
     a.classList.toggle('aba--atual', a.dataset.parte === parte.id)
     const p = cap.partes.find((x) => x.id === a.dataset.parte)
@@ -532,7 +532,7 @@ function desenharPesquisa() {
       <li class="linha__item linha__item--cap linha__item--paper linha__item--pronto${ok ? ' linha__item--feito' : ''}">
         <span class="linha__no" aria-hidden="true">${ok ? '✓' : k + 1}</span>
         <article class="cap">
-          <p class="cap__n">Paper ${k + 1} · ${p.data}</p>
+          <p class="cap__n">${p.data}</p>
           <h3 class="cap__t">${p.titulo}</h3>
           <p class="paper__ref"><a href="${p.url}" target="_blank" rel="noopener">${p.ref}</a></p>
           <p class="aula__p">${p.constroi}</p>

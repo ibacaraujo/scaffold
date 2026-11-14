@@ -107,6 +107,19 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
 .resultado__tec { margin-top: 6px !important; font: 400 13px/1.5 var(--mono); color: var(--mute); overflow-wrap: anywhere; }
 .resultado .botao { margin-top: 14px; }
 
+/* trechos do paper (Research): o paper aparece como página, com a seção de onde vem */
+.trecho { margin: 18px 0; padding: 16px 20px 14px; background: #fffdf7; border: 1px solid #e8e1cc; border-left: 4px solid #c9a227; border-radius: 6px; font-family: Georgia, 'Times New Roman', serif; color: #1d1d1d; }
+.trecho p { margin: 6px 0; }
+.trecho__fonte { margin: 0 0 8px !important; font: 600 11.5px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: #8a6d12; }
+.trecho__code { margin: 4px 0 0; padding: 10px 12px; background: #f6f2e4; border-radius: 4px; font: 13.5px/1.55 var(--mono); color: #1d1d1d; overflow-x: auto; }
+.trecho__tab { border-collapse: collapse; font: 14px var(--mono); margin-top: 4px; }
+.trecho__tab th, .trecho__tab td { padding: 5px 10px; border-bottom: 1px solid #e8e1cc; text-align: right; }
+.trecho__tab th { text-align: left; font-family: Georgia, serif; font-weight: 600; }
+.eq { font-family: Georgia, 'Times New Roman', serif; }
+.eq--grande { font-size: 1.25em; text-align: center; margin: 10px 0 !important; }
+.instrucao pre { margin: 12px 0; padding: 12px 14px; background: var(--bg-2); border-radius: 8px; overflow-x: auto; }
+.instrucao pre code { background: none; padding: 0; font-size: 14px; }
+
 /* a capa do paper e o jogo da senha (figuras da pesquisa) */
 .pc { display: grid; gap: 14px; padding: clamp(18px, 2vw, 28px); background: var(--night-2); color: var(--night-fg); border-radius: 16px; }
 .pc__tag { margin: 0; font: 500 13px var(--mono); color: #f5d78e; letter-spacing: .02em; }
@@ -412,7 +425,7 @@ h1 { margin: 6px 0 14px; font-size: clamp(30px, 2.5vw, 48px); font-weight: 500; 
         <p class="capa__sobre capa__sobre--escuro">Depois do curso</p>
         <h2 class="trilha__t">Papers</h2>
         <p class="trilha__p">No curso, o Karpathy implementa papers: Bengio et al. (2003) no makemore, o BatchNorm, a WaveNet, Attention Is All You Need e o GPT-2. Aqui o método continua por sua conta: ler o paper inteiro, achar o núcleo, implementá-lo com a mesma simplicidade, reproduzir um número e fazer uma pergunta que o paper não fez.</p>
-        <p class="trilha__p">O Paper 1 ensina o método. Os seguintes são papers do dia, escolhidos na leitura diária pela linha de pesquisa e implementados no núcleo, do zero.</p>
+        <p class="trilha__p">O Paper 1 ensina o método. Os papers do dia, da linha de pesquisa, ficam em Research.</p>
       </header>
       <ol class="linha" id="linha-papers"></ol>
     </div>
